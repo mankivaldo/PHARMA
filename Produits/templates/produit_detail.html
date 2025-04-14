@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Produits</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .category-badge {
+            font-size: 0.8rem;
+        }
+        .card-produit {
+            transition: transform 0.2s ease-in-out;
+        }
+        .card-produit:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .search-container {
+            position: relative;
+        }
+        .search-container .bi-search {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            color: #6c757d;
+        }
+        .search-input {
+            padding-left: 35px;
+        }
+    </style>
+</head>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <i class="bi bi-shop"></i> Gestion Pharmacie
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active active-nav{% endif %}" href="{% url 'home' %}">
+                        <i class="bi bi-house-door"></i> Accueil
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'produit_list' %}active active-nav{% endif %}" href="{% url 'produit_list' %}">
+                        <i class="bi bi-box-seam"></i> Produits
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'liste_ventes' %}active active-nav{% endif %}" href="{% url 'liste_ventes' %}">
+                        <i class="bi bi-receipt"></i> Historique Ventes
+                    </a>
+                </li>
+            </ul>
+            
+        </div>
+    </div>
+</nav>
+{% block content %}
+<div class="container py-4">
+  
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">
+                <i class="bi bi-box-seam me-2 text-primary"></i>
+                {{ produit.name }}
+            </h2>
+            <div>
+                <a href="{% url 'produit_form' produit.name %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                </a>
+                
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    
+                    <div class="d-flex flex-column">
+                        <span class="badge bg-info fs-6 mb-2 py-2">
+                            <i class="bi bi-tag-fill me-1"></i>{{ produit.categorie }}
+                        </span>
+                        
+                        
+                        
+                        
+                    </div>
+                </div>
+                
+                
+            </div>
+        </div>
+        <div class="card-footer bg-white text-end">
+            <a href="{% url 'produit_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+            </a>
+            
+            {% if produit.stock > 0 %}
+                <a href="{% url 'vente_enregistrer' produit.name %}" class="btn btn-success ms-2">
+                    <i class="bi bi-cart-plus me-1"></i>Enregistrer une vente
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if produit.historique_ventes %}
+        <div class="card mt-4 shadow-sm">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-graph-up me-2 text-success"></i>Historique des ventes
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Quantité</th>
+                                <th>Montant</th>
+                                <th>Client</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vente in produit.historique_ventes %}
+                            <tr>
+                                <td>{{ vente.date|date:"d/m/Y" }}</td>
+                                <td>{{ vente.quantite }}</td>
+                                <td>{{ vente.montant }} €</td>
+                                <td>{{ vente.client|default:"N/A" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-3">
+                                    <i class="bi bi-info-circle me-1"></i>Aucun historique de vente disponible
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

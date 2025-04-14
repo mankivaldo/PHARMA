@@ -1,0 +1,160 @@
+/* Styles pour le sidebar */
+.sidebar {
+    width: 250px;
+    height: 100%;
+    background-color: #009688;
+    position: fixed;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar .logo-details {
+    height: 60px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    background-color: #00796b;
+  }
+  
+  .sidebar .logo-details i {
+    font-size: 28px;
+    color: #fff;
+    min-width: 40px;
+    text-align: center;
+    cursor: pointer;
+  }
+  
+  .sidebar .logo-details .logo_name {
+    font-size: 20px;
+    color: #fff;
+    font-weight: 500;
+    margin-left: 10px;
+  }
+  
+  .sidebar .nav-links {
+    height: calc(100% - 60px);
+    padding: 10px 0;
+    overflow: auto;
+    margin: 0;
+    padding-left: 0;
+  }
+  
+  .sidebar .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .sidebar .nav-links li {
+    position: relative;
+    list-style: none;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar .nav-links li:hover {
+    background-color: #4db6ac;
+  }
+  
+  .sidebar .nav-links li a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    padding: 12px 15px;
+  }
+  
+  .sidebar .nav-links li a.active {
+    background-color: #00796b;
+  }
+  
+  .sidebar .nav-links li i {
+    min-width: 40px;
+    font-size: 18px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .sidebar .nav-links li .link_name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  
+  .sidebar .nav-links li.log_out {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  .sidebar .nav-links li.log_out:hover {
+    background-color: #d32f2f;
+  }
+  
+  /* Ajustement pour le contenu principal */
+  .app-container {
+    display: flex;
+  }
+  
+  .app-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    transition: all 0.3s ease;
+  }
+  
+  /* Pour le mode collapsed du sidebar */
+  .sidebar.close {
+    width: 78px;
+  }
+  
+  .sidebar.close .link_name  {
+    display: none;
+  }
+  .sidebar.close .logo_name {
+    display: none;
+  }
+  
+  .sidebar.close ~ .app-content {
+    margin-left: 78px;
+    width: calc(100% - 78px);
+  }
+  
+  /* Mode responsive */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 78px;
+    }
+    
+    .sidebar .link_name {
+      display: none;
+    }
+    
+    .app-content {
+      margin-left: 78px;
+      width: calc(100% - 78px);
+    }
+    
+    .sidebar.open {
+      width: 250px;
+    }
+    
+    .sidebar.open .link_name {
+      display: block;
+    }
+    
+    .sidebar.open ~ .app-content {
+      margin-left: 250px;
+      width: calc(100% - 250px);
+    }
+  }
+
+/* Styles pour la page de connexion */
+.login-page {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 20px;
+}
+
+.login-page .container {
+    max-width: 100%;
+    padding: 0 20px;
+}

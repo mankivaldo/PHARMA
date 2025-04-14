@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Gestion des Clients</h5>
+            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#customerModal">
+                <i class="fas fa-plus"></i> Nouveau client
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Téléphone</th>
+                            <th>Adresse</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.id }}</td>
+                            <td>{{ customer.name }}</td>
+                            <td>{{ customer.email|default:"-" }}</td>
+                            <td>{{ customer.phone|default:"-" }}</td>
+                            <td>{{ customer.address|default:"-" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-info btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#viewModal{{ customer.id }}"
+                                        title="Voir les détails">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editModal{{ customer.id }}"
+                                        title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ customer.id }}"
+                                        title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Aucun client trouvé</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajout -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouveau client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'ajouter_customer' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Téléphone</label>
+                        <input type="text" class="form-control" id="phone" name="phone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Adresse</label>
+                        <input type="text" class="form-control" id="address" name="address">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Modification et Suppression -->
+{% for customer in customers %}
+<!-- Modal Détails -->
+<div class="modal fade" id="viewModal{{ customer.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails du client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>ID:</strong> {{ customer.id }}</p>
+                <p><strong>Nom:</strong> {{ customer.name }}</p>
+                <p><strong>Email:</strong> {{ customer.email|default:"-" }}</p>
+                <p><strong>Téléphone:</strong> {{ customer.phone|default:"-" }}</p>
+                <p><strong>Adresse:</strong> {{ customer.address|default:"-" }}</p>
+                <p><strong>Date de création:</strong> {{ customer.created_date|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modification -->
+<div class="modal fade" id="editModal{{ customer.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier le client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'modifier_customer' customer.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name{{ customer.id }}" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="name{{ customer.id }}" 
+                               name="name" value="{{ customer.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email{{ customer.id }}" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email{{ customer.id }}" 
+                               name="email" value="{{ customer.email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone{{ customer.id }}" class="form-label">Téléphone</label>
+                        <input type="text" class="form-control" id="phone{{ customer.id }}" 
+                               name="phone" value="{{ customer.phone }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="address{{ customer.id }}" class="form-label">Adresse</label>
+                        <input type="text" class="form-control" id="address{{ customer.id }}" 
+                               name="address" value="{{ customer.address }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Suppression -->
+<div class="modal fade" id="deleteModal{{ customer.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le client "{{ customer.name }}" ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <a href="{% url 'supprimer_customer' customer.id %}" class="btn btn-danger">Supprimer</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.alert-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 280px;
+}
+.table th, .table td {
+    vertical-align: middle;
+}
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+
+<script>
+// Auto-close alerts after 3 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 3000);
+});
+</script>
+{% endblock %} 

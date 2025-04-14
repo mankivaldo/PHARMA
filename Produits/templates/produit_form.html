@@ -1,0 +1,262 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Produits</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css"
+    />
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'style.css' %}" />
+
+    <style>
+      :root {
+        --primary-color: #00bcd4;
+        --secondary-color: #f1f1f1;
+        --text-color: #333;
+        --error-color: #dc3545;
+        --success-color: #28a745;
+      }
+
+      body {
+        color: var(--text-color);
+        background-color: var(--secondary-color);
+        font-family: 'Roboto', sans-serif;
+        line-height: 1.6;
+      }
+      
+      .card {
+        padding: 2rem;
+        margin: 1rem 0 4rem;
+        border: none !important;
+        border-radius: 10px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+      }
+      
+      .blue-text {
+        color: var(--primary-color);
+      }
+      
+      .form-control-label {
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      
+      input,
+      textarea,
+      select,
+      button {
+        padding: 0.8rem 1rem;
+        border-radius: 6px !important;
+        margin: 0.5rem 0;
+        box-sizing: border-box;
+        border: 1px solid #ddd;
+        font-size: 1rem !important;
+        transition: all 0.3s;
+      }
+      
+      input:focus,
+      textarea:focus,
+      select:focus {
+        box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.25) !important;
+        border: 1px solid var(--primary-color);
+        outline: none;
+      }
+      
+      .btn {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+      }
+      
+      .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+      
+      .btn-primary:hover {
+        background-color: #0097a7;
+        border-color: #0097a7;
+      }
+      
+      .btn-success {
+        background-color: var(--success-color);
+        border-color: var(--success-color);
+      }
+      
+      .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+      }
+      
+      .error-message {
+        color: var(--error-color);
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+      }
+      
+      .page-header {
+        margin-bottom: 1.5rem;
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .card {
+          padding: 1.5rem;
+        }
+        
+        .form-row {
+          flex-direction: column;
+        }
+      }
+      
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: #aaa;
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid px-1 py-5 mx-auto">
+      <div class="row d-flex justify-content-center">
+        <div class="col-xl-7 col-lg-8 col-md-9 col-11 text-center">
+          <div class="page-header">
+            <h2 class="mb-3">{% if form.instance.id %}Modifier le Produit{% else %}Ajouter un produit{% endif %}</h2>
+            <p class="blue-text">
+              Veuillez noter que tous les champs sont obligatoires.
+            </p>
+          </div>
+          
+          <div class="card">
+            <h5 class="text-center mb-4">Gestion de l'inventaire</h5>
+            
+            {% if messages %}
+            <div class="alert alert-danger mb-4">
+              <ul class="list-unstyled mb-0">
+                {% for message in messages %}
+                <li>{{ message }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+            
+            <form class="form-card" method="post" novalidate>
+              {% csrf_token %}
+              
+              <div class="row justify-content-between text-left">
+                <div class="form-group col-sm-6 flex-column d-flex">
+                  <label class="form-control-label px-3" for="{{ form.name.id_for_label }}">
+                    Nom du produit<span class="text-danger"> *</span>
+                  </label>
+                  {{ form.name }}
+                  {% if form.name.errors %}
+                  <div class="error-message">{{ form.name.errors }}</div>
+                  {% endif %}
+                </div>
+                
+                <div class="form-group col-sm-6 flex-column d-flex">
+                  <label class="form-control-label px-3" for="{{ form.categorie.id_for_label }}">
+                    Catégorie du produit<span class="text-danger"> *</span>
+                  </label>
+                  {{ form.categorie }}
+                  {% if form.categorie.errors %}
+                  <div class="error-message">{{ form.categorie.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="row justify-content-between mt-4">
+                <div class="form-group col-sm-6">
+                  <a href="{% url 'produit_list' %}" class="btn btn-success btn-block">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                  </a>
+                </div>
+                
+                <div class="form-group col-sm-6">
+                  <button type="submit" class="btn btn-primary btn-block">
+                    {% if form.instance.id %}Mettre à jour{% else %}Enregistrer{% endif %}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{% static 'bootstrap.min.js' %}"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <script>
+      // Form validation
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('.form-card');
+        
+        // Add visual cues when inputs are valid/invalid
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+          input.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+              this.style.borderColor = 'var(--error-color)';
+            } else {
+              this.style.borderColor = 'var(--success-color)';
+            }
+          });
+          
+          // Reset validation styling on focus
+          input.addEventListener('focus', function() {
+            this.style.borderColor = 'var(--primary-color)';
+          });
+        });
+        
+        // Form submission validation
+        form.addEventListener('submit', function(event) {
+          let isValid = true;
+          
+          inputs.forEach(input => {
+            if (input.hasAttribute('required') && input.value.trim() === '') {
+              input.style.borderColor = 'var(--error-color)';
+              isValid = false;
+            }
+          });
+          
+          if (!isValid) {
+            event.preventDefault();
+            // Show error message at the top of the form
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger mb-4';
+            errorDiv.innerHTML = 'Veuillez remplir tous les champs obligatoires.';
+            
+            // Insert at the beginning of the form
+            form.insertBefore(errorDiv, form.firstChild);
+            
+            // Scroll to the top of the form
+            errorDiv.scrollIntoView({ behavior: 'smooth' });
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+              errorDiv.remove();
+            }, 5000);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

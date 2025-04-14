@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if form.instance.id %}
+                            Modifier l'utilisateur
+                        {% else %}
+                            Créer un nouvel utilisateur
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" autocomplete="off">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="utilisateur" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control {% if form.utilisateur.errors %}is-invalid{% endif %}" 
+                                   id="utilisateur" name="utilisateur" 
+                                   value="{% if form.instance.id %}{{ form.instance.utilisateur }}{% endif %}"
+                                   placeholder="Entrez le nom d'utilisateur" 
+                                   autocomplete="off" required>
+                            {% if form.utilisateur.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.utilisateur.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                   id="email" name="email" 
+                                   value="{% if form.instance.id %}{{ form.instance.email }}{% endif %}"
+                                   placeholder="Entrez l'adresse email" 
+                                   autocomplete="off" required>
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.email.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="mot_de_passe" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control {% if form.mot_de_passe.errors %}is-invalid{% endif %}" 
+                                   id="mot_de_passe" name="mot_de_passe" 
+                                   placeholder="Entrez le mot de passe"
+                                   autocomplete="new-password"
+                                   {% if not form.instance.id %}required{% endif %}>
+                            {% if form.mot_de_passe.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.mot_de_passe.errors.0 }}
+                            </div>
+                            {% endif %}
+                            {% if form.instance.id %}
+                            <small class="text-muted">Laissez vide pour conserver le mot de passe actuel</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirmation_mot_de_passe" class="form-label">Confirmer le mot de passe</label>
+                            <input type="password" class="form-control {% if form.confirmation_mot_de_passe.errors %}is-invalid{% endif %}" 
+                                   id="confirmation_mot_de_passe" name="confirmation_mot_de_passe" 
+                                   placeholder="Confirmez le mot de passe"
+                                   autocomplete="new-password"
+                                   {% if not form.instance.id %}required{% endif %}>
+                            {% if form.confirmation_mot_de_passe.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.confirmation_mot_de_passe.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'liste_utilisateurs' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.id %}
+                                    <i class="fas fa-save"></i> Enregistrer les modifications
+                                {% else %}
+                                    <i class="fas fa-plus"></i> Créer l'utilisateur
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.alert-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    min-width: 280px;
+}
+.form-control::placeholder {
+    color: #6c757d;
+    opacity: 0.7;
+}
+</style>
+
+<script>
+// Auto-close alerts after 3 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 3000);
+});
+</script>
+{% endblock %} 

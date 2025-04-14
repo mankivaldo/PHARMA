@@ -1,0 +1,110 @@
+{% load static %}
+<head>
+  <link rel="stylesheet" href="{% static 'css.css' %}" />
+  <script src="{% static 'js.js' %}"></script>
+</head>
+<div class="sidebar">
+  <div class="logo-details">
+    <i class="fas fa-clinic-medical"></i>
+    <span class="logo_name">PharmaSys</span>
+  </div>
+  <ul class="nav-links">
+    <li>
+      <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span class="link_name">Tableau de bord</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'add-produit' %}" class="{% if request.resolver_match.url_name == 'add-produit' %}active{% endif %}">
+        <i class="fas fa-pills"></i>
+        <span class="link_name">Ajouter Produit</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'vente' %}" class="{% if request.resolver_match.url_name == 'vente' %}active{% endif %}">
+        <i class="fas fa-cash-register"></i>
+        <span class="link_name">Vente</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_ventes' %}" class="{% if request.resolver_match.url_name == 'liste_ventes' %}active{% endif %}">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span class="link_name">Liste des ventes</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'produit_list' %}" class="{% if request.resolver_match.url_name == 'produit_list' %}active{% endif %}">
+        <i class="fas fa-clipboard-list"></i>
+        <span class="link_name">Liste des produits</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'creer_utilisateur' %}" class="{% if request.resolver_match.url_name == 'creer_utilisateur' %}active{% endif %}">
+        <i class="fas fa-user-plus"></i>
+        <span class="link_name">Créer utilisateur</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_utilisateurs' %}" class="{% if request.resolver_match.url_name == 'liste_utilisateurs' %}active{% endif %}">
+        <i class="fas fa-users"></i>
+        <span class="link_name">Liste des utilisateurs</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_customers' %}" class="{% if request.resolver_match.url_name == 'liste_customers' %}active{% endif %}">
+        <i class="fas fa-user-tie"></i>
+        <span class="link_name">Liste des clients</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_conditions' %}" class="{% if request.resolver_match.url_name == 'liste_conditions' %}active{% endif %}">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span class="link_name">Liste des conditions</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_categories' %}" class="{% if request.resolver_match.url_name == 'liste_categories' %}active{% endif %}">
+        <i class="fas fa-tags"></i>
+        <span class="link_name">Liste des catégories</span>
+      </a>
+    </li>
+    
+    <li>
+      <a href="#" data-bs-toggle="modal" data-bs-target="#userModal">
+        <i class="fas fa-user-circle"></i>
+        <span class="link_name">Mon Profil</span>
+      </a>
+    </li>
+
+  </ul>
+</div>
+
+<!-- Modal Utilisateur -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="userModalLabel">Mon Profil</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <i class="fas fa-user-circle fa-4x text-primary"></i>
+        </div>
+        <div class="user-info">
+          <p><strong>Nom d'utilisateur:</strong> {{ user.username }}</p>
+          <p><strong>Email:</strong> {{ user.email }}</p>
+          <p><strong>Date d'inscription:</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
+          <p><strong>Dernière connexion:</strong> {{ user.last_login|date:"d/m/Y H:i" }}</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="{% url 'logout' %}" class="btn btn-danger">
+          <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>

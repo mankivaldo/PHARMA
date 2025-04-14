@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="card-title mb-0">Liste des catégories</h5>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'ajouter_categorie' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Nouvelle catégorie
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for categorie in categories %}
+                                        <tr>
+                                            <td>{{ categorie.id }}</td>
+                                            <td>{{ categorie.name }}</td>
+                                            <td>{{ categorie.description }}</td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <a href="{% url 'modifier_categorie' categorie.id %}" class="btn btn-sm btn-info" title="Modifier">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
+                                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ categorie.id }}">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Modal de confirmation de suppression -->
+                                        <div class="modal fade" id="deleteModal{{ categorie.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Confirmer la suppression</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer la catégorie "{{ categorie.name }}" ?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <a href="{% url 'supprimer_categorie' categorie.id %}" class="btn btn-danger">Supprimer</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Aucune catégorie trouvée.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
