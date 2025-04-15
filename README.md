@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PharmaSys - Système de Gestion de Pharmacie
 
 Un système de gestion de pharmacie développé avec Django pour gérer les produits, les ventes, les clients et les utilisateurs.
@@ -87,3 +88,6 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou à
 ## Licence
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+=======
+# PHARMA
+>>>>>>> 2819fdcd955de3ca9b118832a7d27a993bb529e3
