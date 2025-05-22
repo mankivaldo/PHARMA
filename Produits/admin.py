@@ -28,8 +28,8 @@ class StockesAdmin(admin.ModelAdmin):
 
 # Classe Admin pour Customer
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'phone', 'address', 'created_date', 'save_by')
-    search_fields = ['name', 'email', 'phone']
+    list_display = ('id', 'name', 'NIF', 'phone', 'address', 'created_date', 'save_by')
+    search_fields = ['name', 'NIF', 'phone']
     list_filter = ('created_date', 'save_by')
     date_hierarchy = 'created_date'
 
@@ -40,7 +40,7 @@ class VenteProduitInline(admin.TabularInline):
     autocomplete_fields = ['produit']
     
     # Ajout des champs readonly pour afficher les informations calculées
-    readonly_fields = ['prix_unitaire', 'prix_total']
+    readonly_fields = [ 'prix_total']
     
     def prix_unitaire(self, obj):
         if obj.produit_id:
@@ -61,7 +61,7 @@ class VenteProduitInline(admin.TabularInline):
 
 # Classe Admin pour Vente
 class VenteAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'date_vente', 'statut_paiement_display', 'montant_total')
+    list_display = ('id', 'customer', 'date_vente', 'statut_paiement_display', 'montant_total', 'vendeur', 'date_payement')
     list_filter = ('date_vente', 'statupaiement')
     search_fields = ['customer__name', 'id']
     date_hierarchy = 'date_vente'

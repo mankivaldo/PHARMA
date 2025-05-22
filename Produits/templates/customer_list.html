@@ -28,7 +28,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Nom</th>
-                            <th>Email</th>
+                            <th>NIF</th>
                             <th>Téléphone</th>
                             <th>Adresse</th>
                             <th>Actions</th>
@@ -39,7 +39,7 @@
                         <tr>
                             <td>{{ customer.id }}</td>
                             <td>{{ customer.name }}</td>
-                            <td>{{ customer.email|default:"-" }}</td>
+                            <td>{{ customer.NIF|default:"-" }}</td>
                             <td>{{ customer.phone|default:"-" }}</td>
                             <td>{{ customer.address|default:"-" }}</td>
                             <td>
@@ -91,8 +91,8 @@
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email">
+                        <label for="NIF" class="form-label">NIF</label>
+                        <input type="text" class="form-control" id="NIF" name="NIF">
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Téléphone</label>
@@ -125,7 +125,7 @@
             <div class="modal-body">
                 <p><strong>ID:</strong> {{ customer.id }}</p>
                 <p><strong>Nom:</strong> {{ customer.name }}</p>
-                <p><strong>Email:</strong> {{ customer.email|default:"-" }}</p>
+                <p><strong>NIF:</strong> {{ customer.NIF|default:"-" }}</p>
                 <p><strong>Téléphone:</strong> {{ customer.phone|default:"-" }}</p>
                 <p><strong>Adresse:</strong> {{ customer.address|default:"-" }}</p>
                 <p><strong>Date de création:</strong> {{ customer.created_date|date:"d/m/Y H:i" }}</p>
@@ -151,9 +151,9 @@
                                name="name" value="{{ customer.name }}" required>
                     </div>
                     <div class="mb-3">
-                        <label for="email{{ customer.id }}" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email{{ customer.id }}" 
-                               name="email" value="{{ customer.email }}">
+                        <label for="NIF{{ customer.id }}" class="form-label">NIF</label>
+                        <input type="NIF" class="form-control" id="NIF{{ customer.id }}" 
+                               name="NIF" value="{{ customer.NIF }}">
                     </div>
                     <div class="mb-3">
                         <label for="phone{{ customer.id }}" class="form-label">Téléphone</label>

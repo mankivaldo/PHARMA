@@ -14,6 +14,10 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from .forms import *
 from .models import *
+import openpyxl
+from openpyxl.styles import Font, Alignment
+from django.http import HttpResponse
+from django.forms import inlineformset_factory
 
 # Fonctions de base pour la gestion des produits
 @login_required
@@ -65,6 +69,7 @@ class add_produit(LoginRequiredMixin, View):
             price = form.cleaned_data.get('price')
             condisionnement = form.cleaned_data.get('condisionnement')
             date_expiration = form.cleaned_data.get('date_expiration')
+            lot = form.cleaned_data.get('lot')
             description = form.cleaned_data.get('description', '')
             
             # Vérifier si ce produit exact existe déjà
@@ -86,7 +91,9 @@ class add_produit(LoginRequiredMixin, View):
                     condisionnement=condisionnement,
                     description=description,
                     date_ajout=timezone.now(),
-                    date_expiration=date_expiration
+                    date_expiration=date_expiration,
+                    lot=lot,
+                    
                 )
                 messages.success(request, "Nouveau produit ajouté avec succès!")
             except Stockes.MultipleObjectsReturned:
@@ -145,64 +152,49 @@ class detail_vente(LoginRequiredMixin, DetailView):
 class AddinvoiceView(LoginRequiredMixin, View):
     template_name = "vente.html"
     login_url = 'connexion'
-    
+
     def get(self, request, *args, **kwargs):
-        customers = Customer.objects.select_related('save_by').all()
+        vente_form = VenteForm()
+        customers = Customer.objects.all()
         stocks = Stockes.objects.filter(quantite__gt=0)
-        
         context = {
+            'vente_form': vente_form,
             'Customers': customers,
-            'Stocks': stocks
+            'Stocks': stocks,
         }
-        
         return render(request, self.template_name, context)
-    
+
     def post(self, request, *args, **kwargs):
-        customers = Customer.objects.select_related('save_by').all()
-        stocks = Stockes.objects.filter(quantite__gt=0)
-        
-        context = {
-            'Customers': customers,
-            'Stocks': stocks
-        }
-        
-        if request.method == 'POST':
-            client_id = request.POST.get('client')
-            payment_type = request.POST.get('payment')
-            
-            if client_id:
-                customer = get_object_or_404(Customer, id=client_id)
-                
-                vente = Vente.objects.create(
-                    customer=customer,
-                    statupaiement=payment_type
-                )
-                
+        vente_form = VenteForm(request.POST)
+        if vente_form.is_valid():
+            with transaction.atomic():
+                vente = vente_form.save(commit=False)
+                vente.vendeur = request.user
+                vente.save()
+
                 stocks = request.POST.getlist('stock[]')
-                quantities = request.POST.getlist('qt[]')
-                
-                for i in range(len(stocks)):
-                    if i < len(quantities):
-                        stock_id = stocks[i]
-                        quantity = int(quantities[i])
-                        
-                        if stock_id and quantity > 0:
-                            stock = get_object_or_404(Stockes, id=stock_id)
-                            
-                            if stock.quantite >= quantity:
-                                VenteProduit.objects.create(
-                                    vente=vente,
-                                    produit=stock,
-                                    quantite=quantity
-                                )
-                            else:
-                                messages.error(request, f"Stock insuffisant pour {stock.produit.name}")
-                
-                messages.success(request, "Vente enregistrée avec succès!")
-                return redirect('home')
-            else:
-                messages.error(request, "Veuillez sélectionner un client")
-        
+                qts = request.POST.getlist('qt[]')
+                prixs = request.POST.getlist('prix[]')
+                for stock_id, qt, prix in zip(stocks, qts, prixs):
+                    if stock_id and qt and prix:
+                        VenteProduit.objects.create(
+                            vente=vente,
+                            produit_id=stock_id,
+                            quantite=int(qt),
+                            prix_vente=float(prix)
+                        )
+            messages.success(request, "Vente enregistrée avec succès!")
+            return redirect('liste_ventes')
+        else:
+            messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
+
+        customers = Customer.objects.all()
+        stocks = Stockes.objects.filter(quantite__gt=0)
+        context = {
+            'vente_form': vente_form,
+            'Customers': customers,
+            'Stocks': stocks,
+        }
         return render(request, self.template_name, context)
 
 class ListeVentesView(LoginRequiredMixin, ListView):
@@ -220,6 +212,7 @@ class ListeVentesView(LoginRequiredMixin, ListView):
         date_fin = self.request.GET.get('date_fin')
         client_id = self.request.GET.get('client')
         statut = self.request.GET.get('statut')
+        date_payement = self.request.GET.get('date_payement')
         
         if date_debut:
             queryset = queryset.filter(date_vente__gte=date_debut)
@@ -232,6 +225,8 @@ class ListeVentesView(LoginRequiredMixin, ListView):
         
         if statut:
             queryset = queryset.filter(statupaiement=statut)
+        if date_payement:
+            queryset = queryset.filter(date_payement__date=date_payement)
         
         return queryset
     
@@ -424,14 +419,14 @@ def ajouter_customer(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         phone = request.POST.get('phone')
-        email = request.POST.get('email')
+        NIF = request.POST.get('NIF')
         address = request.POST.get('address')
         
         if name and phone:
             Customer.objects.create(
                 name=name,
                 phone=phone,
-                email=email,
+                NIF=NIF,
                 address=address
             )
             messages.success(request, 'Client ajouté avec succès!')
@@ -445,13 +440,13 @@ def modifier_customer(request, pk):
     if request.method == 'POST':
         name = request.POST.get('name')
         phone = request.POST.get('phone')
-        email = request.POST.get('email')
+        NIF = request.POST.get('NIF')
         address = request.POST.get('address')
         
         if name and phone:
             customer.name = name
             customer.phone = phone
-            customer.email = email
+            customer.NIF = NIF
             customer.address = address
             customer.save()
             messages.success(request, 'Client modifié avec succès!')
@@ -469,4 +464,75 @@ def supprimer_customer(request, pk):
         messages.error(request, 'Impossible de supprimer ce client car il est associé à des ventes')
     return redirect('liste_customers')
 
-  
+@login_required
+def export_ventes_excel(request):
+    # Récupérer les filtres depuis la requête
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    client_id = request.GET.get('client')
+    statut = request.GET.get('statut')
+
+    # Filtrer les ventes
+    ventes = Vente.objects.all()
+    if date_debut:
+        ventes = ventes.filter(date_vente__gte=date_debut)
+    if date_fin:
+        ventes = ventes.filter(date_vente__lte=date_fin + ' 23:59:59')
+    if client_id:
+        ventes = ventes.filter(customer_id=client_id)
+    if statut:
+        ventes = ventes.filter(statupaiement=statut)
+
+    # Vérifier si des ventes existent
+    if not ventes.exists():
+        messages.error(request, "Aucune vente trouvée pour les critères sélectionnés.")
+        return redirect('liste_ventes')
+
+    # Créer un fichier Excel
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Rapport des Ventes"
+
+    # Ajouter les en-têtes
+    headers = ["ID Vente", "Client", "statut", "Date de Vente", "Date de payement", "Produit", "Quantité", "Prix Total"]
+    for col_num, header in enumerate(headers, 1):
+        cell = sheet.cell(row=1, column=col_num)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+    # Ajouter les données des ventes
+    row_num = 2
+    for vente in ventes:
+        for produit_vendu in vente.Ventes.all():
+            sheet.cell(row=row_num, column=1).value = vente.id
+            sheet.cell(row=row_num, column=2).value = vente.customer.name
+            sheet.cell(row=row_num, column=3).value = vente.statupaiement
+            sheet.cell(row=row_num, column=4).value = vente.date_vente.strftime('%Y-%m-%d')
+            sheet.cell(row=row_num, column=5).value = vente.date_payement.strftime('%Y-%m-%d')
+            sheet.cell(row=row_num, column=6).value = produit_vendu.produit.produit.name
+            sheet.cell(row=row_num, column=7).value = produit_vendu.quantite
+            sheet.cell(row=row_num, column=8).value = produit_vendu.quantite * produit_vendu.prix_vente
+            row_num += 1
+
+    # Ajuster la largeur des colonnes
+    for column in sheet.columns:
+        max_length = 0
+        column_letter = column[0].column_letter  # Récupérer la lettre de la colonne
+        for cell in column:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        sheet.column_dimensions[column_letter].width = max_length + 2
+
+    # Préparer la réponse HTTP pour le téléchargement
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="rapport_ventes.xlsx"'
+    workbook.save(response)
+    return response
+
+

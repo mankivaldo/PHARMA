@@ -13,7 +13,7 @@
             </div>
             <div class="col-md-4">
                 <div class="stats-card bg-success text-white p-3">
-                    <h3 class="text-center">{{ montant_total }} Bf</h3>
+                    <h3 class="text-center">{{ montant_total }} Fbu</h3>
                     <p class="text-center mb-0">Chiffre d'affaires</p>
                 </div>
             </div>
@@ -31,34 +31,52 @@
                 <h4 class="mb-0">Filtres</h4>
             </div>
             <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-3">
-                        <label for="date_debut" class="form-label">Date début</label>
-                        <input type="date" class="form-control" id="date_debut" name="date_debut">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="date_fin" class="form-label">Date fin</label>
-                        <input type="date" class="form-control" id="date_fin" name="date_fin">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="client" class="form-label">Client</label>
-                        <select class="form-control" id="client" name="client">
-                            <option value="">Tous les clients</option>
-                            <!-- Vous pouvez ajouter une boucle for ici pour les clients -->
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="statut" class="form-label">Statut de paiement</label>
-                        <select class="form-control" id="statut" name="statut">
-                            <option value="">Tous les statuts</option>
-                            <option value="C">Cash</option>
-                            <option value="D">Dette</option>
-                            <option value="CH">Chèque</option>
-                        </select>
-                    </div>
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-primary">Filtrer</button>
-                        <a href="{% url 'liste_ventes' %}" class="btn btn-secondary">Réinitialiser</a>
+                <form method="get" action="{% url 'liste_ventes' %}">
+                    <div class="row g-3">
+                        <!-- Date de début -->
+                        <div class="col-md-3">
+                            <label for="date_debut" class="form-label">Date début</label>
+                            <input type="date" class="form-control" id="date_debut" name="date_debut" value="{{ request.GET.date_debut }}">
+                        </div>
+            
+                        <!-- Date de fin -->
+                        <div class="col-md-3">
+                            <label for="date_fin" class="form-label">Date fin</label>
+                            <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ request.GET.date_fin }}">
+                        </div>
+            
+                        <!-- Client -->
+                        <div class="col-md-3">
+                            <label for="client" class="form-label">Client</label>
+                            <select class="form-control" id="client" name="client">
+                                <option value="">Tous les clients</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}" {% if request.GET.client == client.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ client.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+            
+                        <!-- Statut de paiement -->
+                        <div class="col-md-3">
+                            <label for="statut" class="form-label">Statut de paiement</label>
+                            <select class="form-control" id="statut" name="statut">
+                                <option value="">Tous les statuts</option>
+                                <option value="C" {% if request.GET.statut == "C" %}selected{% endif %}>Cash</option>
+                                <option value="D" {% if request.GET.statut == "D" %}selected{% endif %}>Dette</option>
+                                <option value="CH" {% if request.GET.statut == "CH" %}selected{% endif %}>Chèque</option>
+                            </select>
+                        </div>
+            
+                        <!-- Boutons -->
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-primary" name="action" value="filter">Filtrer</button>
+                            <a href="{% url 'export_ventes_excel' %}?date_debut={{ request.GET.date_debut }}&date_fin={{ request.GET.date_fin }}&client={{ request.GET.client }}&statut={{ request.GET.statut }}" class="btn btn-success">
+    <i class="bi bi-download"></i> Télécharger 
+</a>
+                            <a href="{% url 'liste_ventes' %}" class="btn btn-secondary">Réinitialiser</a>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -82,7 +100,8 @@
                                 <th>Client</th>
                                 <th>Nombre d'articles</th>
                                 <th>Montant total</th>
-                                <th>Statut de paiement</th>
+                                <th>Statut de payement</th>
+                                <th>date de payement</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -93,7 +112,7 @@
                                 <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
                                 <td>{{ vente.customer.name }}</td>
                                 <td>{{ vente.Ventes.count }}</td>
-                                <td>{{ vente.get_total_amount }} €</td>
+                                <td>{{ vente.get_total_amount }} Fbu</td>
                                 <td>
                                     {% if vente.statupaiement == 'C' %}
                                         <span class="badge bg-success">Cash</span>
@@ -103,11 +122,13 @@
                                         <span class="badge bg-info">Chèque</span>
                                     {% endif %}
                                 </td>
+                                <td>{{ vente.date_payement|date:"d/m/y H:i"}}</td>
                                 <td>
                                     <a href="{% url 'detail-vente' vente.id %}" class="btn btn-info btn-sm">
                                         <i class="bi bi-eye"></i> Détails
                                     </a>
                                 </td>
+                                
                             </tr>
                             {% empty %}
                             <tr>

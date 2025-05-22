@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils.timezone import now
 from django.utils import timezone 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -39,6 +40,7 @@ class Stockes(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     condisionnement = models.ForeignKey(Condition, on_delete=models.CASCADE)
     quantite = models.PositiveIntegerField(default=0)
+    lot = models.CharField(max_length=250, null=True, blank=True)
     description = models.TextField()
     date_ajout = models.DateTimeField(default=timezone.now)
     date_expiration = models.DateField()
@@ -61,7 +63,7 @@ class Stockes(models.Model):
 
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(null=True, blank=True)
+    NIF = models.CharField(max_length=100)
     phone = models.CharField(max_length=132, null=True, blank=True)
     address = models.CharField(max_length=64, default='')
     created_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -69,6 +71,10 @@ class Customer(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+
 
 
 class Vente(models.Model):
@@ -81,10 +87,27 @@ class Vente(models.Model):
         (PAYMENT_STATUS_CHEQUE, 'Cheque')
     ]
 
-    date_vente = models.DateTimeField(auto_now_add=True)
+    date_vente = models.DateTimeField(default=timezone.now)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     statupaiement = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_CASH)
     vendeur = models.ForeignKey(User, on_delete=models.PROTECT, related_name='ventes_effectuees', null=True, blank=True)
+    date_payement = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        # Vérifier la logique de date_payement
+        if self.statupaiement in [self.PAYMENT_STATUS_CASH, self.PAYMENT_STATUS_CHEQUE]:
+            # Si le statut est Cash ou Chèque, la date de paiement doit être aujourd'hui
+            if self.date_payement and self.date_payement.date() != now().date():
+                raise ValidationError("Pour un paiement en Cash ou Chèque, la date de paiement doit être aujourd'hui.")
+        elif self.statupaiement == self.PAYMENT_STATUS_DETTE:
+            # Si le statut est Dette, la date de paiement doit être dans le futur
+            if self.date_payement and self.date_payement.date() <= now().date():
+                raise ValidationError("Pour un paiement en Dette, la date de paiement doit être supérieure à la date du jour.")
+
+    def save(self, *args, **kwargs):
+        # Appeler la méthode clean avant de sauvegarder
+        self.clean()
+        super().save(*args, **kwargs)
 
     def get_total_amount(self):
         total = sum(item.total_price for item in self.Ventes.all())
@@ -98,10 +121,11 @@ class VenteProduit(models.Model):
     vente = models.ForeignKey(Vente, related_name='Ventes', on_delete=models.CASCADE)
     produit = models.ForeignKey(Stockes, on_delete=models.PROTECT)
     quantite = models.PositiveIntegerField(default=1)
+    prix_vente = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     @property
     def total_price(self):
-        return self.produit.price * self.quantite
+        return self.prix_vente * self.quantite
 
     def clean(self):
         if self.quantite > self.produit.quantite:

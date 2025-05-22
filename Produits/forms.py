@@ -10,7 +10,7 @@ class ProduitForm(forms.ModelForm):
 class AjoutProduits(forms.ModelForm):
     class Meta:
         model = Stockes
-        fields = ['produit', 'quantite', 'price', 'condisionnement', 'description', 'date_expiration']
+        fields = ['produit', 'quantite', 'price', 'condisionnement', 'description', 'lot' , 'date_expiration']
         widgets = {
             'date_expiration': forms.DateInput(attrs={'type': 'date'}),
             'description': forms.Textarea(attrs={'rows': 3}),
@@ -80,3 +80,37 @@ class LoginForm(AuthenticationForm):
             'placeholder': 'Mot de passe'
         })
     )
+
+class VenteForm(forms.ModelForm):
+    class Meta:
+        model = Vente
+        fields = ['customer', 'statupaiement', 'date_payement']
+        widgets = {
+            'date_payement': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        statupaiement = cleaned_data.get('statupaiement')
+        date_payement = cleaned_data.get('date_payement')
+
+        if statupaiement in ['C', 'CH'] and date_payement and date_payement.date() != now().date():
+            raise forms.ValidationError("Pour un paiement en Cash ou Chèque, la date de paiement doit être aujourd'hui.")
+        elif statupaiement == 'D' and date_payement and date_payement.date() <= now().date():
+            raise forms.ValidationError("Pour un paiement en Dette, la date de paiement doit être supérieure à la date du jour.")
+        return cleaned_data
+
+
+class VenteProduitForm(forms.ModelForm):
+    class Meta:
+        model = VenteProduit
+        fields = ['produit', 'quantite', 'prix_vente']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        produit = cleaned_data.get('produit')
+        quantite = cleaned_data.get('quantite')
+
+        if produit and quantite and quantite > produit.quantite:
+            raise forms.ValidationError(f"Stock insuffisant. Disponible : {produit.quantite}")
+        return cleaned_data

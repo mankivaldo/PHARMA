@@ -172,7 +172,7 @@
               <div class="row justify-content-between text-left">
                 <div class="form-group col-sm-6 flex-column d-flex">
                   <label class="form-control-label px-3"
-                    >Le prix du produit<span class="text-danger">
+                    >Le prix d'Achat<span class="text-danger">
                       *</span
                     ></label
                   >
@@ -207,7 +207,25 @@
                   </div>
                   {% endif %}
                 </div>
-               
+                
+                <div class="form-group col-sm-6 flex-column d-flex">
+                  <label class="form-control-label px-3"
+                    >Lot<span class="text-danger">
+                      *</span
+                    ></label
+                  >
+
+                  {{form.lot}}
+
+                  <div class="text-danger">{{form.lot.errors}}</div>
+
+
+                  {% if errors.lot %}
+                  <div class="error" style="color: red">
+                    <p>{{error.lot}}</p>
+                  </div>
+                  {% endif %}
+                </div>
 
               </div>
 

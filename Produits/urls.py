@@ -10,7 +10,8 @@ from .views import (
     connexion, inscription,
     liste_conditions, ajouter_condition, modifier_condition, supprimer_condition,
     liste_customers, ajouter_customer, modifier_customer, supprimer_customer,
-    liste_categories, ajouter_categorie, modifier_categorie, supprimer_categorie
+    liste_categories, ajouter_categorie, modifier_categorie, supprimer_categorie,
+    export_ventes_excel
 )
 
 urlpatterns = [
@@ -56,4 +57,7 @@ urlpatterns = [
     path('categorie/ajouter/', login_required(ajouter_categorie), name='ajouter_categorie'),
     path('categorie/<int:pk>/modifier/', login_required(modifier_categorie), name='modifier_categorie'),
     path('categorie/<int:pk>/supprimer/', login_required(supprimer_categorie), name='supprimer_categorie'),
+
+    # Export ventes
+    path('export-ventes-excel/', export_ventes_excel, name='export_ventes_excel'),
 ]

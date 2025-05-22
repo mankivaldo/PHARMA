@@ -31,6 +31,7 @@
               <th scope="col">Description <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
               <th scope="col">Date d'ajout <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
               <th scope="col">Date d'expiration <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col" class="text-center">Lot <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
               <th scope="col" class="text-center">Actions</th>
             </tr>
           </thead>
@@ -50,10 +51,11 @@
                   <span>{{ x.quantite }}</span>
                 </div>
               </td>
-              <td>{{ x.price }} Bf</td>
+              <td>{{ x.price }} Fbu</td>
               <td>{{ x.description|truncatechars:50 }}</td>
               <td>{{ x.date_ajout|date:"d/m/Y" }}</td>
               <td>{{ x.date_expiration|date:"d/m/Y" }}</td>
+              <td>{{ x.lot }}</td>
               <td>
                 <div class="d-flex justify-content-center gap-2">
                   <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exampleModal-{{ x.pk }}" title="Détails">
@@ -103,6 +105,7 @@
                                 <span class="badge bg-danger">Rupture de stock</span>
                                 {% endif %}
                               </dd>
+                             
                             </dl>
                           </div>
                         </div>
@@ -117,6 +120,9 @@
                               
                               <dt class="col-sm-4">Date d'expiration</dt>
                               <dd class="col-sm-8">{{ x.date_expiration|date:"d/m/Y" }}</dd>
+
+                              <dt class="col-sm-4">Lot</dt>
+                              <dd class="col-sm-8">{{ x.lot }}</dd>
                               
                               <dt class="col-sm-4">Conditionnement</dt>
                               <dd class="col-sm-8">{{ x.condisionnement }}</dd>
