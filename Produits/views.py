@@ -17,7 +17,9 @@ from .models import *
 import openpyxl
 from openpyxl.styles import Font, Alignment
 from django.http import HttpResponse
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, modelformset_factory
+from decimal import Decimal
+from django.db.models import Sum, F
 
 # Fonctions de base pour la gestion des produits
 @login_required
@@ -50,64 +52,6 @@ def produit_form(request, name=None):
     
     return render(request, 'produit_form.html', {'form': form})
 
-# Class d'ajout des données
-class add_produit(LoginRequiredMixin, View):
-    template_name = 'add-Produits.html'
-    form_class = AjoutProduits
-    login_url = 'connexion'
-    
-    def get(self, request, *args, **kwargs):
-        form = self.form_class()
-        return render(request, self.template_name, {'form': form})
-    
-    def post(self, request, *args, **kwargs):
-        form = self.form_class(request.POST)
-        if form.is_valid():
-            # Récupérer les données du formulaire
-            produit = form.cleaned_data.get('produit')
-            quantite = form.cleaned_data.get('quantite')
-            price = form.cleaned_data.get('price')
-            condisionnement = form.cleaned_data.get('condisionnement')
-            date_expiration = form.cleaned_data.get('date_expiration')
-            lot = form.cleaned_data.get('lot')
-            description = form.cleaned_data.get('description', '')
-            
-            # Vérifier si ce produit exact existe déjà
-            try:
-                stock = Stockes.objects.get(produit=produit)
-                stock = Stockes.objects.get(date_expiration=date_expiration)
-                # Si trouvé, mettre à jour la quantité, le prix et la date
-                stock.quantite += quantite
-                stock.price = price
-                stock.date_ajout = timezone.now()
-                stock.save()
-                messages.success(request, "Stock du produit mis à jour avec succès!")
-            except Stockes.DoesNotExist:
-                # Le produit n'existe pas, créer un nouveau stock
-                nouveau_stock = Stockes.objects.create(
-                    produit=produit,
-                    quantite=quantite,
-                    price=price,
-                    condisionnement=condisionnement,
-                    description=description,
-                    date_ajout=timezone.now(),
-                    date_expiration=date_expiration,
-                    lot=lot,
-                    
-                )
-                messages.success(request, "Nouveau produit ajouté avec succès!")
-            except Stockes.MultipleObjectsReturned:
-                # Gérer le cas où plusieurs stocks sont trouvés pour le même produit
-                stock = Stockes.objects.filter(produit=produit).first()
-                stock.quantite += quantite
-                stock.price = price
-                stock.date_ajout = timezone.now()
-                stock.save()
-                messages.success(request, "Stock mis à jour avec succès (plusieurs stocks trouvés)!")
-            
-            return redirect('home')
-        
-        return render(request, self.template_name, {'form': form})
 
 # Generique fonction
 class Affichage(LoginRequiredMixin, ListView):
@@ -115,26 +59,9 @@ class Affichage(LoginRequiredMixin, ListView):
     queryset = Stockes.objects.all()
     login_url = 'connexion'
 
-# Classe pour la modification
-class update_données(LoginRequiredMixin, UpdateView):
-    model = Stockes
-    form_class = AjoutProduits
-    template_name = 'modification.html'
-    success_url = reverse_lazy('home')
-    login_url = 'connexion'
 
-# Delete
-class MyModelDeleteView(LoginRequiredMixin, DeleteView):
-    model = Stockes
-    template_name = 'comptent.html'
-    success_url = reverse_lazy('home')
-    login_url = 'connexion'
 
-# Fonction de voir detail
-class edit(LoginRequiredMixin, DetailView):
-    model = Stockes
-    template_name = "detail.html"
-    login_url = 'connexion'
+
 
 # List view
 class detail_vente(LoginRequiredMixin, DetailView):
@@ -145,7 +72,7 @@ class detail_vente(LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['produits_vendus'] = VenteProduit.objects.filter(vente=self.object)
+        context['produits_vendus'] = self.object.lignes.all()
         return context
 
 # Fonction pour vente
@@ -483,7 +410,6 @@ def export_ventes_excel(request):
     if statut:
         ventes = ventes.filter(statupaiement=statut)
 
-    # Vérifier si des ventes existent
     if not ventes.exists():
         messages.error(request, "Aucune vente trouvée pour les critères sélectionnés.")
         return redirect('liste_ventes')
@@ -493,7 +419,6 @@ def export_ventes_excel(request):
     sheet = workbook.active
     sheet.title = "Rapport des Ventes"
 
-    # Ajouter les en-têtes
     headers = ["ID Vente", "Client", "statut", "Date de Vente", "Date de payement", "Produit", "Quantité", "Prix Total"]
     for col_num, header in enumerate(headers, 1):
         cell = sheet.cell(row=1, column=col_num)
@@ -501,15 +426,14 @@ def export_ventes_excel(request):
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center")
 
-    # Ajouter les données des ventes
     row_num = 2
     for vente in ventes:
-        for produit_vendu in vente.Ventes.all():
+        for produit_vendu in vente.lignes.all():  # <-- ici, on utilise 'lignes'
             sheet.cell(row=row_num, column=1).value = vente.id
             sheet.cell(row=row_num, column=2).value = vente.customer.name
             sheet.cell(row=row_num, column=3).value = vente.statupaiement
             sheet.cell(row=row_num, column=4).value = vente.date_vente.strftime('%Y-%m-%d')
-            sheet.cell(row=row_num, column=5).value = vente.date_payement.strftime('%Y-%m-%d')
+            sheet.cell(row=row_num, column=5).value = vente.date_payement.strftime('%Y-%m-%d') if vente.date_payement else ""
             sheet.cell(row=row_num, column=6).value = produit_vendu.produit.produit.name
             sheet.cell(row=row_num, column=7).value = produit_vendu.quantite
             sheet.cell(row=row_num, column=8).value = produit_vendu.quantite * produit_vendu.prix_vente
@@ -518,7 +442,7 @@ def export_ventes_excel(request):
     # Ajuster la largeur des colonnes
     for column in sheet.columns:
         max_length = 0
-        column_letter = column[0].column_letter  # Récupérer la lettre de la colonne
+        column_letter = column[0].column_letter
         for cell in column:
             try:
                 if cell.value:
@@ -527,12 +451,333 @@ def export_ventes_excel(request):
                 pass
         sheet.column_dimensions[column_letter].width = max_length + 2
 
-    # Préparer la réponse HTTP pour le téléchargement
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename="rapport_ventes.xlsx"'
     workbook.save(response)
     return response
+
+
+@login_required
+def ajuster_stock(request):
+    if request.method == 'POST':
+        form = AjustementStockForm(request.POST)
+        if form.is_valid():
+            stock = form.cleaned_data['stock']
+            nouvelle_quantite = form.cleaned_data['nouvelle_quantite']
+            raison = form.cleaned_data['raison']
+            utilisateur = request.user
+
+            ancienne_quantite = stock.quantite
+            if nouvelle_quantite != ancienne_quantite:
+                # Mise à jour du stock
+                stock.quantite = nouvelle_quantite
+                stock.save()
+                # Traçabilité
+                ModificationStock.objects.create(
+                    produit=stock,
+                    type_modification='AJUSTEMENT',
+                    quantite=abs(nouvelle_quantite - ancienne_quantite),
+                    utilisateur=utilisateur,
+                    raison=raison
+                )
+            return redirect('liste_stock')
+    else:
+        form = AjustementStockForm()
+    return render(request, 'ajuster_stock.html', {'form': form})
+
+@login_required
+def ajouter_achat(request):
+    AchatLigneFormSet = modelformset_factory(AchatLigne, form=AchatLigneForm, extra=3)
+    if request.method == 'POST':
+        achat_form = AchatForm(request.POST)
+        formset = AchatLigneFormSet(request.POST, queryset=AchatLigne.objects.none())
+        if achat_form.is_valid() and formset.is_valid():
+            try:
+                with transaction.atomic():  # Utiliser une transaction pour garantir l'intégrité des données
+                    # Sauvegarder l'achat
+                    achat = achat_form.save(commit=False)
+                    achat.utilisateur = request.user
+                    achat.save()
+
+                    # Traiter les lignes d'achat
+                    for form in formset:
+                        if form.cleaned_data:  # Vérifier qu'il y a des données
+                            # Créer la ligne d'achat
+                            ligne = form.save(commit=False)
+                            ligne.achat = achat
+                            ligne.save()
+
+                            # Créer une entrée dans le stock
+                            stock = Stockes.objects.create(
+                                produit=ligne.produit,
+                                quantite=ligne.quantite,
+                                prix_vente=ligne.prix_achat * Decimal('1.2'),  # Marge de 20%
+                                stock_minimum=5,
+                                achat_ligne=ligne
+                            )
+
+                            # Enregistrer la modification de stock
+                            ModificationStock.objects.create(
+                                produit=stock,
+                                type_modification='ENTREE',
+                                quantite=ligne.quantite,
+                                utilisateur=request.user,
+                                raison=f"Achat n°{achat.id} - Lot: {ligne.lot}"
+                            )
+
+                messages.success(request, "Achat enregistré et stock mis à jour avec succès !")
+                return redirect('liste_achats')
+
+            except Exception as e:
+                messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
+        else:
+            for form in formset:
+                for field, errors in form.errors.items():
+                    messages.error(request, f"Erreur : {errors[0]}")
+            if achat_form.errors:
+                for field, errors in achat_form.errors.items():
+                    messages.error(request, f"Erreur : {errors[0]}")
+    else:
+        achat_form = AchatForm()
+        formset = AchatLigneFormSet(queryset=AchatLigne.objects.none())
+
+    return render(request, 'ajouter_achat.html', {
+        'achat_form': achat_form,
+        'formset': formset
+    })
+
+class ListeStockView(LoginRequiredMixin, ListView):
+    model = Stockes
+    template_name = 'liste_stock.html'
+    context_object_name = 'stocks'
+    login_url = 'connexion'
+    ordering = ['-achat_ligne__date_ajout']  # Correction: utiliser le champ via la relation
+    paginate_by = 20  # Optionnel, pour paginer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Ajoute ici des filtres si besoin (par produit, lot, etc.)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ajoute ici d'autres infos utiles pour le template
+        return context
+
+class DetailStockView(LoginRequiredMixin, DetailView):
+    model = Stockes
+    template_name = 'detail_stock.html'
+    context_object_name = 'stock'
+    login_url = 'connexion'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ajoute ici l'historique des mouvements si besoin
+        context['modifications'] = self.object.modifications.all().order_by('-date_modification')
+        return context
+
+# Vues pour les fournisseurs
+@login_required
+def liste_fournisseurs(request):
+    fournisseurs = Fournisseur.objects.all().order_by('-id')
+    return render(request, 'liste_fournisseurs.html', {'fournisseurs': fournisseurs})
+
+@login_required
+def ajouter_fournisseur(request):
+    if request.method == 'POST':
+        form = FournisseurForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Fournisseur ajouté avec succès!')
+            return redirect('liste_fournisseurs')
+    else:
+        form = FournisseurForm()
+    return render(request, 'ajout_fourniseur.html', {'form': form})
+
+@login_required
+def modifier_fournisseur(request, pk):
+    fournisseur = get_object_or_404(Fournisseur, pk=pk)
+    if request.method == 'POST':
+        form = FournisseurForm(request.POST, instance=fournisseur)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Fournisseur modifié avec succès!')
+            return redirect('liste_fournisseurs')
+    else:
+        form = FournisseurForm(instance=fournisseur)
+    return render(request, 'ajout_fourniseur.html', {'form': form, 'fournisseur': fournisseur})
+
+@login_required
+def supprimer_fournisseur(request, pk):
+    fournisseur = get_object_or_404(Fournisseur, pk=pk)
+    try:
+        fournisseur.delete()
+        messages.success(request, 'Fournisseur supprimé avec succès!')
+    except Exception as e:
+        messages.error(request, 'Impossible de supprimer ce fournisseur car il est lié à des achats.')
+    return redirect('liste_fournisseurs')
+
+class ListeAchatsView(LoginRequiredMixin, ListView):
+    model = Achat
+    template_name = 'liste_achats.html'
+    context_object_name = 'achats'
+    login_url = 'connexion'
+    ordering = ['-date_achat']
+    paginate_by = 10
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+class DetailAchatView(LoginRequiredMixin, DetailView):
+    model = Achat
+    template_name = 'detail_achat.html'
+    context_object_name = 'achat'
+    login_url = 'connexion'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['lignes'] = self.object.lignes.all()
+        return context
+
+class AchatLigneCreateView(LoginRequiredMixin, CreateView):
+    model = AchatLigne
+    form_class = AchatLigneForm
+    template_name = 'ajouter_achat.html'
+    success_url = reverse_lazy('liste_achats')
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            achat_ligne = form.save()
+            # Créer automatiquement une entrée dans Stockes
+            stock = Stockes.objects.create(
+                produit=achat_ligne.produit,
+                quantite=achat_ligne.quantite,
+                prix_vente=achat_ligne.prix_achat * Decimal('1.2'),  # Marge de 20% par défaut
+                stock_minimum=5,  # Valeur par défaut
+                achat_ligne=achat_ligne
+            )
+            # Créer une modification de stock
+            ModificationStock.objects.create(
+                produit=stock,
+                type_modification='ENTREE',
+                quantite=achat_ligne.quantite,
+                utilisateur=self.request.user,
+                raison=f"Nouvel achat - Lot: {achat_ligne.lot}"
+            )
+        return super().form_valid(form)
+
+@login_required
+def ajuster_stock(request, stock_id):
+    stock = get_object_or_404(Stockes, id=stock_id)
+    if request.method == 'POST':
+        nouvelle_quantite = int(request.POST.get('nouvelle_quantite', 0))
+        ancienne_quantite = stock.quantite
+        difference = nouvelle_quantite - ancienne_quantite
+        
+        with transaction.atomic():
+            stock.quantite = nouvelle_quantite
+            stock.save()
+            
+            # Enregistrer la modification
+            type_modif = 'ENTREE' if difference > 0 else 'SORTIE'
+            ModificationStock.objects.create(
+                produit=stock,
+                type_modification=type_modif,
+                quantite=abs(difference),
+                utilisateur=request.user,
+                raison="Ajustement manuel du stock"
+            )
+            
+        messages.success(request, f"Stock ajusté avec succès. Nouvelle quantité : {nouvelle_quantite}")
+        return redirect('liste_stock')
+    
+    return render(request, 'ajuster_stock.html', {'stock': stock})
+
+@login_required
+def modifier_stock(request, pk):
+    stock = get_object_or_404(Stockes, pk=pk)
+    if request.method == 'POST':
+        form = StockForm(request.POST, instance=stock)
+        if form.is_valid():
+            with transaction.atomic():
+                previous_quantity = stock.quantite
+                modified_stock = form.save()
+                quantity_diff = modified_stock.quantite - previous_quantity
+                
+                if quantity_diff != 0:
+                    # Record the stock modification
+                    ModificationStock.objects.create(
+                        produit=modified_stock,
+                        type_modification='AJUSTEMENT',
+                        quantite=abs(quantity_diff),
+                        utilisateur=request.user,
+                        raison=f"Modification du stock {modified_stock.produit.name}"
+                    )
+            
+            messages.success(request, "Stock modifié avec succès !")
+            return redirect('liste_stock')
+    else:
+        form = StockForm(instance=stock)
+    
+    return render(request, 'modifier_stock.html', {
+        'form': form,
+        'stock': stock
+    })
+
+class DashboardView(LoginRequiredMixin, View):
+    template_name = 'dashboard.html'
+    
+    def get(self, request):
+        # Statistiques des stocks
+        produits_en_stock = Stockes.objects.all()
+        stock_faible = produits_en_stock.filter(quantite__lte=models.F('stock_minimum')).count()
+        produits_expires = produits_en_stock.filter(
+            achat_ligne__date_expiration__lt=timezone.now().date()
+        ).count()
+        
+        # Statistiques des ventes
+        ventes_mois = Vente.objects.filter(
+            date_vente__month=timezone.now().month,
+            date_vente__year=timezone.now().year
+        )
+        total_ventes_mois = sum(vente.get_total_amount() for vente in ventes_mois)
+        nb_ventes_mois = ventes_mois.count()
+        
+        # Top 5 des produits les plus vendus
+        top_produits = VenteProduit.objects.values(
+            'produit__produit__name'
+        ).annotate(
+            total_vendu=Sum('quantite')
+        ).order_by('-total_vendu')[:5]
+        
+        # Statistiques des achats
+        achats_mois = Achat.objects.filter(
+            date_achat__month=timezone.now().month,
+            date_achat__year=timezone.now().year
+        )
+        total_achats_mois = sum(
+            ligne.prix_achat * ligne.quantite 
+            for achat in achats_mois 
+            for ligne in achat.lignes.all()
+        )
+        
+        # Calcul de la marge brute du mois
+        marge_brute = total_ventes_mois - total_achats_mois
+        
+        context = {
+            'total_produits': produits_en_stock.count(),
+            'stock_faible': stock_faible,
+            'produits_expires': produits_expires,
+            'ventes_mois': nb_ventes_mois,
+            'total_ventes_mois': total_ventes_mois,
+            'top_produits': top_produits,
+            'total_achats_mois': total_achats_mois,
+            'marge_brute': marge_brute,
+        }
+        
+        return render(request, self.template_name, context)
 
 

@@ -44,31 +44,38 @@
         </div>
     </nav>
     <div class="container mt-5">
-        <h1 class="text-capitalize text-center mb-4 bg-dark text-white p-3">Enregistrer une Vente</h1>
+        <h1 class="text-capitalize text-center mb-4 bg-dark text-white p-3">Enregistrer une Vente</h1>        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         <form method="post">
             {% csrf_token %}
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <label for="customer" class="form-label">Client</label>
-                    <select name="customer" class="form-control" id="customer" required>
-                        <option value="">Choisissez votre Client...</option>
-                        {% for customer in Customers %}
-                        <option value="{{customer.id}}">
-                            {{forloop.counter}}-{{customer.name}}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    {{ vente_form.customer.label_tag }}
+                    {{ vente_form.customer }}
+                    {% if vente_form.customer.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ vente_form.customer.errors }}
+                    </div>
+                    {% endif %}
                 </div>
-            </div>
-            <div class="row mb-3">
+            </div>            <div class="row mb-3">
                 <div class="col-md-12">
-                    <label for="statupaiement" class="form-label">Type de Paiement</label>
-                    <select name="statupaiement" class="form-control" id="statupaiement" required>
-                        <option value="">Type de paiement</option>
-                        <option value="C">Cash</option>
-                        <option value="D">Dette</option>
-                        <option value="CH">Chèque</option>
-                    </select>
+                    {{ vente_form.statupaiement.label_tag }}
+                    {{ vente_form.statupaiement }}
+                    {% if vente_form.statupaiement.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ vente_form.statupaiement.errors }}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <div class="row mb-3">

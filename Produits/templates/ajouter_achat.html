@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col">
+                    <h2><i class="fas fa-shopping-cart me-2"></i>Nouvel achat</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="content scroll-y smooth-scroll">
+        <div class="container-fluid">
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <form method="post" class="needs-validation form-scrollable" novalidate>
+                {% csrf_token %}
+                {{ formset.management_form }}
+                {% for hidden in formset.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="card-title mb-0">Informations générales</h5>
+                            </div>
+                            <div class="card-body">
+                                {% for field in achat_form %}
+                                <div class="mb-3">
+                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ field.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Lignes d'achat</h5>
+                        <button type="button" class="btn btn-sm btn-primary" id="add-line">
+                            <i class="fas fa-plus"></i> Ajouter une ligne
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container scroll-y">
+                            <div class="table-responsive">
+                                {% if formset.non_form_errors %}
+                                <div class="alert alert-danger">
+                                    {{ formset.non_form_errors }}
+                                </div>
+                                {% endif %}
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Quantité</th>
+                                            <th>Prix achat</th>
+                                            <th>Lot</th>
+                                            <th>Date expiration</th>
+                                            <th>Conditionnement</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="formset-container">
+                                        {% for form in formset %}
+                                        <tr class="formset-row">
+                                            {% for hidden in form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                            <td>
+                                                {{ form.produit }}
+                                                {% if form.produit.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.produit.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.quantite }}
+                                                {% if form.quantite.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.quantite.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.prix_achat }}
+                                                {% if form.prix_achat.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.prix_achat.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.lot }}
+                                                {% if form.lot.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.lot.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.date_expiration }}
+                                                {% if form.date_expiration.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.date_expiration.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.conditionnement }}
+                                                {% if form.conditionnement.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.conditionnement.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ form.description }}
+                                                {% if form.description.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-danger remove-row">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-footer">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>Enregistrer l'achat
+                                </button>
+                                <a href="{% url 'liste_achats' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Annuler
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const formsetContainer = document.getElementById('formset-container');
+        const addButton = document.getElementById('add-line');
+        const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        const initialForms = document.getElementById('id_form-INITIAL_FORMS');
+        
+        function updateElementIndex(el, prefix, ndx) {
+            const id_regex = new RegExp('(' + prefix + '-\\d+)');
+            const replacement = prefix + '-' + ndx;
+            if (el.getAttribute("for")) el.setAttribute('for', el.getAttribute("for").replace(id_regex, replacement));
+            if (el.id) el.id = el.id.replace(id_regex, replacement);
+            if (el.name) el.name = el.name.replace(id_regex, replacement);
+        }
+        
+        // Fonction pour ajouter une nouvelle ligne
+        addButton.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const row = formsetContainer.children[0].cloneNode(true);
+            
+            // Mise à jour des index
+            row.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                updateElementIndex(element, 'form', formCount);
+                if (element.type !== 'hidden') {
+                    element.value = '';
+                }
+            });
+            
+            formsetContainer.appendChild(row);
+            totalForms.value = formCount + 1;
+        });
+        
+        // Suppression d'une ligne
+        formsetContainer.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-row')) {
+                const row = e.target.closest('.formset-row');
+                if (formsetContainer.children.length > parseInt(initialForms.value)) {
+                    row.remove();
+                    // Mettre à jour les index des lignes restantes
+                    Array.from(formsetContainer.children).forEach((row, idx) => {
+                        row.querySelectorAll('input, select, textarea, label').forEach(element => {
+                            updateElementIndex(element, 'form', idx);
+                        });
+                    });
+                    totalForms.value = formsetContainer.children.length;
+                }
+            }
+        });
+
+        // Validation du formulaire
+        const form = document.querySelector('.needs-validation');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+            
+            // Vérifier qu'il y a au moins une ligne d'achat
+            if (formsetContainer.children.length === 0) {
+                isValid = false;
+                alert('Veuillez ajouter au moins une ligne d\'achat.');
+            }
+            
+            // Vérifier que les champs obligatoires sont remplis
+            formsetContainer.querySelectorAll('input[required], select[required]').forEach(input => {
+                if (!input.value) {
+                    isValid = false;
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            form.classList.add('was-validated');
+        });
+    });
+</script>
+{% endblock %}

@@ -3,22 +3,35 @@
   <link rel="stylesheet" href="{% static 'css.css' %}" />
   <script src="{% static 'js.js' %}"></script>
 </head>
+<style>
+.sidebar .logo-details .logo-img {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  width: 250px;
+  height: 95px;
+}
+</style>
 <div class="sidebar">
   <div class="logo-details">
-    <i class="fas fa-clinic-medical"></i>
-    <span class="logo_name">PharmaSys</span>
+    <img src="{% static 'image/logo.jpg' %}" alt="Logo" class="logo-img ">
+ 
   </div>
-  <ul class="nav-links">
-    <li>
-      <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+  <ul class="nav-links"><li>      <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
         <i class="fas fa-tachometer-alt"></i>
         <span class="link_name">Tableau de bord</span>
       </a>
     </li>
     <li>
-      <a href="{% url 'add-produit' %}" class="{% if request.resolver_match.url_name == 'add-produit' %}active{% endif %}">
+      <a href="{% url 'ajouter_achat' %}" class="{% if request.resolver_match.url_name == 'ajouter_achat' %}active{% endif %}">
         <i class="fas fa-pills"></i>
-        <span class="link_name">Ajouter Produit</span>
+        <span class="link_name">Ajouter Achat</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'liste_achats' %}" class="{% if request.resolver_match.url_name == 'liste_achats' %}active{% endif %}">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="link_name">Liste des achats</span>
       </a>
     </li>
     <li>
@@ -69,6 +82,28 @@
         <span class="link_name">Liste des catégories</span>
       </a>
     </li>
+    
+    <li>
+      <a href="{% url 'liste_stock' %}" class="{% if request.resolver_match.url_name == 'comptent' %}active{% endif %}">
+        <i class="fas fa-box"></i>
+        <span class="link_name">Stock</span>
+      </a>
+    </li>
+    
+    <li>
+      <a href="{% url 'liste_fournisseurs' %}" class="{% if request.resolver_match.url_name == 'liste_fournisseurs' %}active{% endif %}">
+        <i class="fas fa-truck"></i>
+        <span class="link_name">Liste des fournisseurs</span>
+      </a>
+    </li>
+    
+    <li>
+      <a href="{% url 'ajouter_fournisseur' %}" class="{% if request.resolver_match.url_name == 'ajouter_fournisseur' %}active{% endif %}">
+        <i class="fas fa-user-plus"></i>
+        <span class="link_name">Ajouter un fournisseur</span>
+      </a>
+    </li>
+
     
     <li>
       <a href="#" data-bs-toggle="modal" data-bs-target="#userModal">

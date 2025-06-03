@@ -37,28 +37,44 @@ class Condition(models.Model):
 
 class Stockes(models.Model):
     produit = models.ForeignKey(Produits, on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    condisionnement = models.ForeignKey(Condition, on_delete=models.CASCADE)
     quantite = models.PositiveIntegerField(default=0)
-    lot = models.CharField(max_length=250, null=True, blank=True)
-    description = models.TextField()
-    date_ajout = models.DateTimeField(default=timezone.now)
-    date_expiration = models.DateField()
+    prix_vente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stock_minimum = models.PositiveIntegerField(default=5, help_text="Quantité minimale avant alerte")
+    achat_ligne = models.ForeignKey('AchatLigne', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
-        ordering = ['-date_ajout']
+        ordering = ['-achat_ligne__date_ajout']
         verbose_name_plural = "Stockes"
-
-    def statut_quantite(self):
-        if self.quantite == 0:
-            return 'red'
-        elif self.quantite <= 10:
-            return 'orange'
-        else:
-            return 'green'
+        unique_together = ('produit', 'achat_ligne')
 
     def __str__(self):
-        return f"{self.produit}"
+        lot = self.achat_ligne.lot if self.achat_ligne else '-'
+        exp = self.achat_ligne.date_expiration if self.achat_ligne else '-'
+        return f"{self.produit} | Lot: {lot} | Exp: {exp}"
+
+    @property
+    def lot(self):
+        return self.achat_ligne.lot if self.achat_ligne else None
+
+    @property
+    def date_expiration(self):
+        return self.achat_ligne.date_expiration if self.achat_ligne else None
+
+    @property
+    def prix_achat(self):
+        return self.achat_ligne.prix_achat if self.achat_ligne else None
+
+    @property
+    def description(self):
+        return self.achat_ligne.description if self.achat_ligne else None
+
+    @property
+    def conditionnement(self):
+        return self.achat_ligne.conditionnement if self.achat_ligne else None
+
+    @property
+    def date_ajout(self):
+        return self.achat_ligne.date_ajout if self.achat_ligne else None
 
 
 class Customer(models.Model):
@@ -110,7 +126,7 @@ class Vente(models.Model):
         super().save(*args, **kwargs)
 
     def get_total_amount(self):
-        total = sum(item.total_price for item in self.Ventes.all())
+        total = sum(item.total_price for item in self.lignes.all())
         return total
 
     def __str__(self):
@@ -118,7 +134,7 @@ class Vente(models.Model):
 
 
 class VenteProduit(models.Model):
-    vente = models.ForeignKey(Vente, related_name='Ventes', on_delete=models.CASCADE)
+    vente = models.ForeignKey(Vente, related_name='lignes', on_delete=models.CASCADE)
     produit = models.ForeignKey(Stockes, on_delete=models.PROTECT)
     quantite = models.PositiveIntegerField(default=1)
     prix_vente = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -133,10 +149,20 @@ class VenteProduit(models.Model):
     
     def save(self, *args, **kwargs):
         self.clean()
+        is_new = self._state.adding
         super().save(*args, **kwargs)
         # Mise à jour de la quantité en stock
         self.produit.quantite -= self.quantite
         self.produit.save()
+        # Traçabilité du mouvement (uniquement à la création)
+        if is_new:
+            ModificationStock.objects.create(
+                produit=self.produit,
+                type_modification='SORTIE',
+                quantite=self.quantite,
+                utilisateur=self.vente.vendeur,
+                raison=f"Vente n°{self.vente.id}"
+            )
 
     def __str__(self):
         return f"{self.produit.produit.name} - Quantité: {self.quantite} dans Vente {self.vente.id}"
@@ -205,4 +231,41 @@ class Utilisateur(models.Model):
     class Meta:
         verbose_name = "Utilisateur"
         verbose_name_plural = "Utilisateurs"
-     
+
+
+class Fournisseur(models.Model):
+    nom = models.CharField(max_length=100)
+    contact = models.CharField(max_length=100, blank=True)
+    adresse = models.CharField(max_length=255, blank=True)
+    # ...
+
+    def __str__(self):
+        return self.nom
+
+class Achat(models.Model):
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.PROTECT)
+    date_achat = models.DateTimeField(default=timezone.now)
+    facture = models.CharField(max_length=100, blank=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.PROTECT)
+    # ...
+
+    def __str__(self):
+        return f"Achat {self.id} - {self.fournisseur.nom} ({self.date_achat.date()})"
+
+class AchatLigne(models.Model):
+    achat = models.ForeignKey(Achat, related_name='lignes', on_delete=models.CASCADE)
+    produit = models.ForeignKey(Produits, on_delete=models.PROTECT)
+    quantite = models.PositiveIntegerField()
+    prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
+    lot = models.CharField(max_length=250, blank=True, null=True)
+    date_expiration = models.DateField(blank=True, null=True)
+    conditionnement = models.ForeignKey(Condition, on_delete=models.CASCADE, default=1)  # Utilise l'ID 1 comme valeur par défaut
+    description = models.TextField(blank=True)
+    date_ajout = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.produit.name} x{self.quantite} (Lot: {self.lot})"
+
+    class Meta:
+        ordering = ['-date_ajout']
+

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col">
+                    <h2><i class="fas fa-list me-2"></i>Liste des achats</h2>
+                </div>
+                <div class="col text-end">
+                    <a href="{% url 'ajouter_achat' %}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i>Nouvel achat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content scroll-y smooth-scroll">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Fournisseur</th>
+                                    <th>Facture</th>
+                                    <th>Utilisateur</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for achat in achats %}
+                                <tr>
+                                    <td>{{ achat.date_achat|date:"d/m/Y" }}</td>
+                                    <td>{{ achat.fournisseur.nom }}</td>
+                                    <td>{{ achat.facture }}</td>
+                                    <td>{{ achat.utilisateur }}</td>
+                                    <td>{{ achat.get_total|floatformat:2 }} Fbu</td>
+                                    <td>
+                                        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailAchatModal{{ achat.id }}" title="Voir les détails">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal détail achat -->
+                                <div class="modal fade" id="detailAchatModal{{ achat.id }}" tabindex="-1" aria-labelledby="detailAchatModalLabel{{ achat.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-xl">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="detailAchatModalLabel{{ achat.id }}">
+                                                    Détail de l'achat n°{{ achat.id }}
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row mb-4">
+                                                    <div class="col-md-6">
+                                                        <h6>Informations générales</h6>
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <th>Fournisseur :</th>
+                                                                <td>{{ achat.fournisseur.nom }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Date :</th>
+                                                                <td>{{ achat.date_achat|date:"d/m/Y H:i" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Facture :</th>
+                                                                <td>{{ achat.facture }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Utilisateur :</th>
+                                                                <td>{{ achat.utilisateur }}</td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+
+                                                <h6>Articles achetés</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-hover">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Produit</th>
+                                                                <th>Quantité</th>
+                                                                <th>Prix achat</th>
+                                                                <th>Total</th>
+                                                                <th>Lot</th>
+                                                                <th>Date exp.</th>
+                                                                <th>Cond.</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for ligne in achat.lignes.all %}
+                                                            <tr>
+                                                                <td>{{ ligne.produit.name }}</td>
+                                                                <td>{{ ligne.quantite }}</td>                                                                <td>{{ ligne.prix_achat|floatformat:2 }} Fbu</td>
+                                                                <td>{{ ligne.get_total|floatformat:2 }} Fbu</td>
+                                                                <td>{{ ligne.lot|default:"-" }}</td>
+                                                                <td>{{ ligne.date_expiration|date:"d/m/Y"|default:"-" }}</td>
+                                                                <td>{{ ligne.conditionnement.name }}</td>
+                                                            </tr>
+                                                            {% empty %}
+                                                            <tr>
+                                                                <td colspan="7" class="text-center">Aucun article trouvé pour cet achat.</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                        <tfoot>
+                                                            <tr>
+                                                                <th colspan="3" class="text-end">Total :</th>
+                                                                <th>{{ achat.get_total|floatformat:2 }} Fbu</th>
+                                                                <th colspan="3"></th>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">Aucun achat enregistré.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

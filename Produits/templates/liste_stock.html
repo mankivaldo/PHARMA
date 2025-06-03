@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  {% if messages %}
+  <div class="messages-container mb-4">
+    {% for message in messages %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card shadow">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-primary fw-bold">Gestion des Stocks</h5>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+          <i class="bi bi-printer me-1"></i>Imprimer
+        </button>
+      </div>
+    </div>
+    
+    <!-- Statistiques des stocks -->
+    <div class="card-body border-bottom">
+      <div class="row g-4 mb-4">
+        <div class="col-md-3">
+          <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">Total Produits</h6>
+              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">En Stock</h6>
+              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">Stock Limité</h6>
+              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">En Rupture</h6>
+              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de recherche et filtres -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" id="searchInput" placeholder="Rechercher un produit...">
+          </div>
+        </div>
+        <div class="col-md-8 text-end">
+          <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary" data-filter="all">Tous</button>
+            <button type="button" class="btn btn-outline-success" data-filter="en-stock">En stock</button>
+            <button type="button" class="btn btn-outline-warning" data-filter="limite">Stock limité</button>
+            <button type="button" class="btn btn-outline-danger" data-filter="rupture">Rupture</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Produit <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col">Statut & Quantité <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col">Prix <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col">Lot <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col">Date d'expiration <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for x in object_list %}
+            <tr data-status="{% if x.statut_quantite == 'green' %}en-stock{% elif x.statut_quantite == 'orange' %}limite{% else %}rupture{% endif %}">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div>
+                    <h6 class="mb-0">{{ x.produit }}</h6>
+                    <small class="text-muted">{{ x.description|truncatechars:50 }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  {% if x.statut_quantite == 'green' %}
+                  <span class="badge bg-success me-2">En stock</span>
+                  {% elif x.statut_quantite == 'orange' %}
+                  <span class="badge bg-warning me-2">Stock limité</span>
+                  {% else %}
+                  <span class="badge bg-danger me-2">Rupture</span>
+                  {% endif %}
+                  <strong>{{ x.quantite }}</strong>
+                </div>
+              </td>
+              <td>{{ x.price }} Fbu</td>
+              <td>{{ x.lot }}</td>
+              <td>{{ x.date_expiration|date:"d/m/Y" }}</td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exampleModal-{{ x.pk }}" title="Détails">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <a href="{% url 'modifier' x.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <button class="btn btn-sm btn-outline-danger" title="Supprimer">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Modal Détails -->
+            <div class="modal fade" id="exampleModal-{{ x.pk }}" tabindex="-1" aria-labelledby="exampleModalLabel-{{ x.pk }}" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="exampleModalLabel">Détails du produit: {{ x.produit }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <div class="card h-100">
+                          <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">Informations générales</h6>
+                            <dl class="row mb-0">
+                              <dt class="col-sm-4">Produit</dt>
+                              <dd class="col-sm-8">{{ x.produit }}</dd>
+                              
+                              <dt class="col-sm-4">Prix</dt>
+                              <dd class="col-sm-8">{{ x.price }} Fbu</dd>
+                              
+                              <dt class="col-sm-4">Quantité</dt>
+                              <dd class="col-sm-8">{{ x.quantite }}</dd>
+                              
+                              <dt class="col-sm-4">Statut</dt>
+                              <dd class="col-sm-8">
+                                {% if x.statut_quantite == 'green' %}
+                                <span class="badge bg-success">En stock</span>
+                                {% elif x.statut_quantite == 'orange' %}
+                                <span class="badge bg-warning">Stock limité</span>
+                                {% else %}
+                                <span class="badge bg-danger">Rupture de stock</span>
+                                {% endif %}
+                              </dd>
+                            </dl>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="card h-100">
+                          <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">Dates & Description</h6>
+                            <dl class="row mb-0">
+                              <dt class="col-sm-4">Date d'ajout</dt>
+                              <dd class="col-sm-8">{{ x.date_ajout|date:"d/m/Y" }}</dd>
+                              
+                              <dt class="col-sm-4">Date d'expiration</dt>
+                              <dd class="col-sm-8">{{ x.date_expiration|date:"d/m/Y" }}</dd>
+
+                              <dt class="col-sm-4">Lot</dt>
+                              <dd class="col-sm-8">{{ x.lot }}</dd>
+                              
+                              <dt class="col-sm-4">Conditionnement</dt>
+                              <dd class="col-sm-8">{{ x.condisionnement }}</dd>
+                              
+                              <dt class="col-sm-4">Description</dt>
+                              <dd class="col-sm-8">{{ x.description }}</dd>
+                            </dl>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <a href="{% url 'modifier' x.pk %}" class="btn btn-primary">Modifier</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  .card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+  .messages-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    min-width: 280px;
+  }
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+  }
+  .badge {
+    font-weight: 500;
+  }
+  .stats-card {
+    transition: all 0.3s ease;
+  }
+  .stats-card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Recherche
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchText) ? '' : 'none';
+        });
+    });
+
+    // Filtres
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            const rows = document.querySelectorAll('tbody tr');
+
+            // Activer/désactiver les boutons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            rows.forEach(row => {
+                if (filter === 'all' || row.getAttribute('data-status') === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Auto-fermeture des alertes
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 3000);
+});
+</script>
+{% endblock %}

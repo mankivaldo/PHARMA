@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Détail de l'achat n°{{ achat.id }}</h2>
+<p>
+    Fournisseur : {{ achat.fournisseur.nom }}<br>
+    Date : {{ achat.date_achat|date:"d/m/Y H:i" }}<br>
+    Facture : {{ achat.facture }}<br>
+    Utilisateur : {{ achat.utilisateur }}
+</p>
+<h4>Articles achetés</h4>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Produit</th>
+            <th>Quantité</th>
+            <th>Prix achat</th>
+            <th>Lot</th>
+            <th>Date expiration</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ligne in achat.lignes.all %}
+        <tr>
+            <td>{{ ligne.produit.name }}</td>
+            <td>{{ ligne.quantite }}</td>
+            <td>{{ ligne.prix_achat }}</td>
+            <td>{{ ligne.lot }}</td>
+            <td>{{ ligne.date_expiration }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'liste_achats' %}" class="btn btn-secondary">Retour</a>
+{% endblock %}

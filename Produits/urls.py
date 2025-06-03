@@ -1,32 +1,17 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth.decorators import login_required
-from .views import (
-    produit_list, produit_detail, produit_form,
-    add_produit, Affichage, update_données,
-    MyModelDeleteView, edit, detail_vente,
-    AddinvoiceView, ListeVentesView,
-    liste_utilisateurs, creer_utilisateur, modifier_utilisateur, supprimer_utilisateur,
-    connexion, inscription,
-    liste_conditions, ajouter_condition, modifier_condition, supprimer_condition,
-    liste_customers, ajouter_customer, modifier_customer, supprimer_customer,
-    liste_categories, ajouter_categorie, modifier_categorie, supprimer_categorie,
-    export_ventes_excel
-)
+from .views import *
+
 
 urlpatterns = [
     # Pages d'authentification
     path('connexion/', connexion, name='connexion'),
     path('inscription/', inscription, name='inscription'),
     path('logout/', LogoutView.as_view(next_page='connexion'), name='logout'),
-    
     # Pages protégées
-    path('', login_required(Affichage.as_view(), login_url='connexion'), name='home'),
-    path('add-produit/', login_required(add_produit.as_view(), login_url='connexion'), name='add-produit'),
+    path('', login_required(DashboardView.as_view(), login_url='connexion'), name='home'),
     path('vente/', login_required(AddinvoiceView.as_view(), login_url='connexion'), name='vente'),
-    path('modifier/<int:pk>/', login_required(update_données.as_view(), login_url='connexion'), name='modifier'),
-    path('detail/<int:pk>/', login_required(edit.as_view(), login_url='connexion'), name='detail'),
-    path('delete/<int:pk>/', login_required(MyModelDeleteView.as_view(), login_url='connexion'), name='delete'),
     path('detail-vente/<int:pk>/', login_required(detail_vente.as_view(), login_url='connexion'), name='detail-vente'),
     path('liste-ventes/', login_required(ListeVentesView.as_view(), login_url='connexion'), name='liste_ventes'),
     path('produit/nouveau/', login_required(produit_form), name='produit_nouveau'),
@@ -59,5 +44,19 @@ urlpatterns = [
     path('categorie/<int:pk>/supprimer/', login_required(supprimer_categorie), name='supprimer_categorie'),
 
     # Export ventes
-    path('export-ventes-excel/', export_ventes_excel, name='export_ventes_excel'),
+    path('export-ventes-excel/', export_ventes_excel, name='export_ventes_excel'),    # Gestion des achats
+    path('achats/', login_required(ListeAchatsView.as_view(), login_url='connexion'), name='liste_achats'),
+    path('achats/ajouter/', login_required(ajouter_achat, login_url='connexion'), name='ajouter_achat'),
+    path('achat/<int:pk>/', login_required(DetailAchatView.as_view(), login_url='connexion'), name='detail_achat'),
+
+    # Gestion des stocks
+    path('stocks/', login_required(ListeStockView.as_view()), name='liste_stock'),
+    path('stock/ajuster/', login_required(ajuster_stock), name='ajuster_stock'),
+    path('stock/<int:pk>/modifier/', login_required(modifier_stock), name='modifier'),
+    
+    # URLs pour les fournisseurs
+    path('fournisseurs/', login_required(liste_fournisseurs), name='liste_fournisseurs'),
+    path('fournisseur/ajouter/', login_required(ajouter_fournisseur), name='ajouter_fournisseur'),
+    path('fournisseur/<int:pk>/modifier/', login_required(modifier_fournisseur), name='modifier_fournisseur'),
+    path('fournisseur/<int:pk>/supprimer/', login_required(supprimer_fournisseur), name='supprimer_fournisseur'),
 ]

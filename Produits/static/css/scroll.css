@@ -1,0 +1,155 @@
+/* Styles globaux pour le défilement */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Style du wrapper principal */
+.main-wrapper {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Style du contenu principal */
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* En-tête fixe */
+.content-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1030;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+/* Zone de contenu scrollable */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.5rem;
+    position: relative;
+}
+
+/* Personnalisation de la barre de défilement */
+.content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Style des cartes */
+.card {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+}
+
+/* Style des tableaux avec défilement */
+.table-container {
+    position: relative;
+    max-height: 500px;
+    overflow: auto;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+}
+
+.table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* En-têtes de tableau fixes */
+.table-container table thead th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer fixe pour les formulaires */
+.form-footer {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid #dee2e6;
+    z-index: 1020;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content {
+        padding: 1rem;
+    }
+
+    .table-container {
+        max-height: 400px;
+    }
+}
+
+/* Classes utilitaires pour le défilement */
+.scroll-y {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.scroll-x {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+
+.scroll-hidden {
+    overflow: hidden !important;
+}
+
+.scroll-visible {
+    overflow: visible !important;
+}
+
+/* Style pour les formulaires longs */
+.form-scrollable {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+
+/* Animation de défilement fluide */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
