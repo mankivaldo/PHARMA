@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Categories, Produits, Condition, Stockes, Customer, Vente, VenteProduit, Utilisateur, ModificationStock, Fournisseur, Achat, AchatLigne
+from django.contrib.auth.admin import UserAdmin
+from .models import Categories, Produits, Condition, Stockes, Customer, Vente, VenteProduit, CustomUser, ModificationStock, Fournisseur, Achat, AchatLigne
 from django.utils.html import format_html
 
 # Classe Admin pour Stockes
@@ -136,10 +137,25 @@ class ProduitsAdmin(admin.ModelAdmin):
 class ConditionAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
     search_fields = ['name']
-@admin.register(Utilisateur)
-class UtilisateurAdmin(admin.ModelAdmin):
-    list_display = ('id', 'utilisateur', 'email', 'mot_de_passe')
-    search_fields = ['utilisateur', 'email']
+
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'role', 'date_creation', 'derniere_connexion', 'is_staff')
+    list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Informations personnelles', {'fields': ('email', 'telephone', 'adresse')}),
+        ('Permissions', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Dates importantes', {'fields': ('last_login', 'date_joined')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'role'),
+        }),
+    )
+    search_fields = ('username', 'email')
+    ordering = ('username',)
 
 # Classe Inline pour AchatLigne
 class AchatLigneInline(admin.TabularInline):

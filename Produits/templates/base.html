@@ -4,47 +4,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PharmaSys - Gestion de Pharmacie</title>
-    <!-- CSS -->
+    <title>PharmaSys - Gestion de Pharmacie</title>    <!-- CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}" />    <link rel="stylesheet" href="{% static 'style.css' %}" />
-    <link rel="stylesheet" href="{% static 'css.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/scroll.css' %}" />
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css.css'%}" />
+     <link rel="stylesheet" href="{% static 'style.css'%}" />
     <link rel="stylesheet" href="{% static 'font/bootstrap-icons.min.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="{% static 'bootstrap.min.js' %}"></script>
-  </head>  <body class="scroll-hidden">
+  
+  </head>  <body>
     <div class="app-container main-wrapper">
       {% if request.resolver_match.url_name != 'connexion' %}
         {% include "sidebar.html" %}
       {% endif %}
       <div class="app-content content-wrapper {% if request.resolver_match.url_name == 'connexion' %}login-page{% endif %}">
-        {% if user.is_authenticated %}
-          {% include "head.html" %}
-        {% endif %}
+      
 
-        {% if messages %}
-        <div class="container mt-3">
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        {% if request.resolver_match.url_name != 'connexion' %}
+          <div class="app-header">
+            <div class="header-left">
+              <h1>DOVAL App</h1>
             </div>
-          {% endfor %}
-        </div>
+            
+          </div>
         {% endif %}
+        
 
         <!---  centrePage(content) --->
         {% block content %}
         {% endblock %}
       </div>
-    </div>
-
-    <!-- Additional Scripts -->
+    </div>    <!-- Additional Scripts -->
+    <script src="{% static 'js/layout.js' %}"></script>
     <script src="{% static 'script.js' %}"></script>
     <script src="{% static 'bootstrap.min.js' %}"></script>
   </body>

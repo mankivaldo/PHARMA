@@ -1,11 +1,39 @@
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.timezone import now
 from django.utils import timezone 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.hashers import make_password, check_password
+
+class CustomUser(AbstractUser):
+    telephone = models.CharField(max_length=15, blank=True, null=True)
+    adresse = models.CharField(max_length=255, blank=True, null=True)
+    role = models.CharField(
+        max_length=20,
+        choices=[
+            ('ADMIN', 'Administrateur'),
+            ('VENDEUR', 'Vendeur'),
+            ('GESTIONNAIRE', 'Gestionnaire de stock')
+        ],
+        default='VENDEUR'
+    )
+    date_creation = models.DateTimeField(auto_now_add=True, null=True)
+    derniere_connexion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Utilisateur"
+        verbose_name_plural = "Utilisateurs"
+        db_table = 'produits_customuser'  # Explicitly set the table name
+
+    def __str__(self):
+        return self.username
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.date_creation = timezone.now()
+        super().save(*args, **kwargs)
 
 class Categories(models.Model):
     name = models.CharField(max_length=250)
@@ -83,7 +111,7 @@ class Customer(models.Model):
     phone = models.CharField(max_length=132, null=True, blank=True)
     address = models.CharField(max_length=64, default='')
     created_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    save_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+    save_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -106,7 +134,7 @@ class Vente(models.Model):
     date_vente = models.DateTimeField(default=timezone.now)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     statupaiement = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_CASH)
-    vendeur = models.ForeignKey(User, on_delete=models.PROTECT, related_name='ventes_effectuees', null=True, blank=True)
+    vendeur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventes_effectuees', null=True, blank=True)
     date_payement = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
@@ -180,7 +208,7 @@ class ModificationStock(models.Model):
     type_modification = models.CharField(max_length=10, choices=TYPE_CHOICES)
     quantite = models.PositiveIntegerField()
     date_modification = models.DateTimeField(auto_now_add=True)
-    utilisateur = models.ForeignKey(User, on_delete=models.PROTECT, related_name='modifications_stock')
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='modifications_stock')
     raison = models.CharField(max_length=255, blank=True, null=True)
     
     def __str__(self):
@@ -191,47 +219,6 @@ class ModificationStock(models.Model):
         verbose_name_plural = "Modifications de stock"
         ordering = ['-date_modification']
         
-
-class Utilisateur(models.Model):
-    utilisateur = models.CharField(max_length=250)
-    email = models.EmailField(max_length=250)
-    mot_de_passe = models.CharField(max_length=250)
-   
-    def __str__(self):
-        return self.utilisateur
-
-    def set_password(self, raw_password):
-        """Hash et stocke le mot de passe"""
-        self.mot_de_passe = make_password(raw_password)
-        self.save()
-
-    def check_password(self, raw_password):
-        """Vérifie si le mot de passe fourni correspond au hash stocké"""
-        return check_password(raw_password, self.mot_de_passe)
-
-    def save(self, *args, **kwargs):
-    # Pour un nouvel utilisateur
-        if self._state.adding:
-            self.mot_de_passe = make_password(self.mot_de_passe)
-        else:
-            # Pour une modification
-            try:
-                ancien = Utilisateur.objects.get(pk=self.pk)
-                # Vérifier si le mot de passe a été modifié
-                if self.mot_de_passe != ancien.mot_de_passe:
-                    # S'il a été modifié, le hasher
-                    self.mot_de_passe = make_password(self.mot_de_passe)
-            except Utilisateur.DoesNotExist:
-                # Sécurité supplémentaire
-                self.mot_de_passe = make_password(self.mot_de_passe)
-        
-        # Sauvegarde finale
-        super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = "Utilisateur"
-        verbose_name_plural = "Utilisateurs"
-
 
 class Fournisseur(models.Model):
     nom = models.CharField(max_length=100)
@@ -246,7 +233,7 @@ class Achat(models.Model):
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.PROTECT)
     date_achat = models.DateTimeField(default=timezone.now)
     facture = models.CharField(max_length=100, blank=True)
-    utilisateur = models.ForeignKey(User, on_delete=models.PROTECT)
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='achats_effectues')
     # ...
 
     def __str__(self):

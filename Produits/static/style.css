@@ -40,25 +40,23 @@ body, html {
 }
 
 body {
-  overflow: hidden;
+  overflow: auto;
   font-family: "Poppins", sans-serif;
   background-color: var(--app-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
 .app-container {
   border-radius: 4px;
   width: 100%;
   height: 100%;
-  max-height: 100%;
-  max-width: 1280px;
-  display: flex;
-  overflow: hidden;
-  box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
   max-width: 2000px;
+  display: flex;
+  overflow: auto; /* ✅ correction ici */
+  box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
   margin: 0 auto;
 }
+
 /*sidebar*/
 
 /*sidebar*/
@@ -181,15 +179,21 @@ body {
   height: 24px;
 }
 
+
+
 .app-content {
-  padding: 16px;
+  padding: 16px 24px; /* ✅ espacement horizontal */
   background-color: var(--app-bg);
   height: 100%;
   flex: 1;
-  max-height: 100%;
+  overflow-y: auto;   /* ✅ scroll vertical activé */
+  overflow-x: hidden;
+  max-height: none;   /* ✅ supprime limite de hauteur */
   display: flex;
   flex-direction: column;
 }
+
+
 .app-content-header {
   display: flex;
   align-items: center;
@@ -228,7 +232,7 @@ body {
   align-items: center;
   margin-left: auto;
 }
-@media screen and (max-width: 520px) {
+@media screen and (max-width: 768px)  {
   .app-content-actions {
     flex-direction: column;
   }
@@ -240,6 +244,13 @@ body {
     padding-bottom: 16px;
     order: 1;
   }
+  
+  .app-content {
+    padding-left: 16px;
+    padding-right: 16px;
+  
+}
+
 }
 
 .search-bar {
@@ -633,4 +644,7 @@ body {
     padding: 15px;
     border-radius: 8px;
     margin-top: 20px;
+}
+* {
+  outline: 1px solid rgba(0, 0, 255, 0.1); /* aide au débug visuel */
 }

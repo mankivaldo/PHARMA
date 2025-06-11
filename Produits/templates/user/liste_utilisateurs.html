@@ -36,23 +36,21 @@
           </thead>
           <tbody>
             {% for utilisateur in utilisateurs %}
-            <tr>
-              <td>{{ utilisateur.id }}</td>
-              <td>{{ utilisateur.utilisateur }}</td>
+            <tr>              <td>{{ utilisateur.id }}</td>
+              <td>{{ utilisateur.username }}</td>
               <td>{{ utilisateur.email }}</td>
               <td>
-                <span class="badge {% if utilisateur.is_superuser %}bg-danger{% else %}bg-primary{% endif %}">
-                  {% if utilisateur.is_superuser %}Administrateur{% else %}Utilisateur{% endif %}
+                <span class="badge {% if utilisateur.role == 'ADMIN' %}bg-danger{% elif utilisateur.role == 'GESTIONNAIRE' %}bg-warning{% else %}bg-primary{% endif %}">
+                  {{ utilisateur.get_role_display }}
                 </span>
               </td>
-              <td>
-                <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsModal{{ utilisateur.id }}">
+              <td>                <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsModal{{ utilisateur.id }}" title="Voir les détails">
                   <i class="fas fa-eye"></i>
                 </button>
-                <a href="{% url 'modifier_utilisateur' utilisateur.id %}" class="btn btn-warning btn-sm">
+                <a href="{% url 'modifier_utilisateur' utilisateur.id %}" class="btn btn-warning btn-sm" title="Modifier l'utilisateur">
                   <i class="fas fa-edit"></i>
                 </a>
-                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ utilisateur.id }}">
+                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ utilisateur.id }}" title="Supprimer l'utilisateur">
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
@@ -74,16 +72,18 @@
 <!-- Details Modal -->
 <div class="modal fade" id="detailsModal{{ utilisateur.id }}" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
+    <div class="modal-content">      <div class="modal-header">
         <h5 class="modal-title">Détails de l'utilisateur</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
+        <button type="button" class="btn-close" data-bs-dismiss="modal" title="Fermer"></button>
+      </div><div class="modal-body">
         <p><strong>ID:</strong> {{ utilisateur.id }}</p>
-        <p><strong>Nom d'utilisateur:</strong> {{ utilisateur.utilisateur }}</p>
+        <p><strong>Nom d'utilisateur:</strong> {{ utilisateur.username }}</p>
         <p><strong>Email:</strong> {{ utilisateur.email }}</p>
-        <p><strong>Rôle:</strong> {% if utilisateur.is_superuser %}Administrateur{% else %}Utilisateur{% endif %}</p>
+        <p><strong>Rôle:</strong> {{ utilisateur.get_role_display }}</p>
+        <p><strong>Téléphone:</strong> {{ utilisateur.telephone|default:'-' }}</p>
+        <p><strong>Adresse:</strong> {{ utilisateur.adresse|default:'-' }}</p>
+        <p><strong>Date de création:</strong> {{ utilisateur.date_creation|date:"d/m/Y H:i" }}</p>
+        <p><strong>Dernière connexion:</strong> {{ utilisateur.derniere_connexion|date:"d/m/Y H:i"|default:'-' }}</p>
       </div>
     </div>
   </div>
@@ -92,13 +92,12 @@
 <!-- Delete Modal -->
 <div class="modal fade" id="deleteModal{{ utilisateur.id }}" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
+    <div class="modal-content">      <div class="modal-header">
         <h5 class="modal-title">Confirmer la suppression</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" title="Fermer"></button>
       </div>
       <div class="modal-body">
-        <p>Êtes-vous sûr de vouloir supprimer l'utilisateur "{{ utilisateur.utilisateur }}" ?</p>
+        <p>Êtes-vous sûr de vouloir supprimer l'utilisateur "{{ utilisateur.username }}" ?</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>

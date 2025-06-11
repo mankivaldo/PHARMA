@@ -172,10 +172,10 @@ class ListeVentesView(LoginRequiredMixin, ListView):
 
 @login_required
 def liste_utilisateurs(request):
-    utilisateurs = Utilisateur.objects.all()
+    utilisateurs = CustomUser.objects.all()
     print("Nombre d'utilisateurs:", utilisateurs.count())  # Pour déboguer
     for user in utilisateurs:
-        print(user.utilisateur, user.email)  # Pour voir les données
+        print(user.username, user.email)  # Pour voir les données
     return render(request, 'user/liste_utilisateurs.html', {'utilisateurs': utilisateurs})
 
 
@@ -194,14 +194,14 @@ def creer_utilisateur(request):
 
 @login_required
 def modifier_utilisateur(request, pk):
-    utilisateur = get_object_or_404(Utilisateur, pk=pk)
-    utilisateurs = Utilisateur.objects.all().order_by('-id')
+    utilisateur = get_object_or_404(CustomUser, pk=pk)
+    utilisateurs = CustomUser.objects.all().order_by('-id')
     
     if request.method == 'POST':
         form = InscriptionForm(request.POST, instance=utilisateur)
         if form.is_valid():
             utilisateur_modifie = form.save()
-            print(f"Utilisateur modifié: {utilisateur_modifie.id} - {utilisateur_modifie.utilisateur}")  # Débogage
+            print(f"Utilisateur modifié: {utilisateur_modifie.id} - {utilisateur_modifie.username}")  # Débogage
             messages.success(request, 'Utilisateur modifié avec succès')
             return redirect('liste_utilisateurs')  # Rediriger vers liste plutôt que création
     else:
@@ -215,12 +215,12 @@ def modifier_utilisateur(request, pk):
 
 @login_required
 def supprimer_utilisateur(request, pk):
-    utilisateur = get_object_or_404(Utilisateur, pk=pk)
+    utilisateur = get_object_or_404(CustomUser, pk=pk)
     if request.method == 'POST':
         utilisateur.delete()
         messages.success(request, 'Utilisateur supprimé avec succès')
-        return redirect('creer_utilisateur')
-    return redirect('creer_utilisateur')
+        return redirect('liste_utilisateurs')
+    return redirect('liste_utilisateurs')
 
 def connexion(request):
     if request.method == 'POST':
@@ -244,9 +244,7 @@ def inscription(request):
     if request.method == 'POST':
         form = InscriptionForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['mot_de_passe'])
-            user.save()
+            user = form.save()
             messages.success(request, 'Inscription réussie! Vous pouvez maintenant vous connecter.')
             return redirect('connexion')
     else:
@@ -263,9 +261,9 @@ def liste_categories(request):
 def ajouter_categorie(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        description = request.POST.get('description', '')
+       
         if name:
-            Categories.objects.create(name=name, description=description)
+            Categories.objects.create(name=name)
             messages.success(request, 'Catégorie ajoutée avec succès!')
             return redirect('liste_categories')
         else:

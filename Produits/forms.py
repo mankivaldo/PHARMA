@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from .models import *
 
 class ProduitForm(forms.ModelForm):
@@ -20,27 +20,35 @@ class AjoutVente(forms.Form):
     quantite = forms.IntegerField(min_value=1)
     customer = forms.CharField(max_length=100)
 
-class InscriptionForm(forms.ModelForm):
-    mot_de_passe = forms.CharField(
-        widget=forms.PasswordInput(attrs={
+class InscriptionForm(UserCreationForm):
+    telephone = forms.CharField(
+        max_length=15, 
+        required=False,
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Mot de passe'
-        }),
-        required=True
+            'placeholder': 'Téléphone'
+        })
     )
-    confirmation_mot_de_passe = forms.CharField(
-        widget=forms.PasswordInput(attrs={
+    adresse = forms.CharField(
+        max_length=255, 
+        required=False,
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Confirmer le mot de passe'
-        }),
-        required=True
+            'placeholder': 'Adresse'
+        })
+    )
+    role = forms.ChoiceField(
+        choices=CustomUser._meta.get_field('role').choices,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
     )
 
     class Meta:
-        model = Utilisateur
-        fields = ['utilisateur', 'email']
+        model = CustomUser
+        fields = ('username', 'email', 'telephone', 'adresse', 'role', 'password1', 'password2')
         widgets = {
-            'utilisateur': forms.TextInput(attrs={
+            'username': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nom d\'utilisateur'
             }),
@@ -49,23 +57,6 @@ class InscriptionForm(forms.ModelForm):
                 'placeholder': 'Email'
             })
         }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        mot_de_passe = cleaned_data.get('mot_de_passe')
-        confirmation_mot_de_passe = cleaned_data.get('confirmation_mot_de_passe')
-
-        if mot_de_passe and confirmation_mot_de_passe and mot_de_passe != confirmation_mot_de_passe:
-            raise forms.ValidationError("Les mots de passe ne correspondent pas")
-        
-        return cleaned_data
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.set_password(self.cleaned_data['mot_de_passe'])
-        if commit:
-            user.save()
-        return user
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
@@ -80,6 +71,11 @@ class LoginForm(AuthenticationForm):
             'placeholder': 'Mot de passe'
         })
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].label = 'Nom d\'utilisateur'
+        self.fields['password'].label = 'Mot de passe'
 
 class VenteForm(forms.ModelForm):
     class Meta:
