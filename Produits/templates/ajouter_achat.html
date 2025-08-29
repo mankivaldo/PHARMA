@@ -76,7 +76,7 @@
                                             <th>Lot</th>
                                             <th>Date expiration</th>
                                             <th>Conditionnement</th>
-                                            <th>Description</th>
+                                            
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -120,12 +120,6 @@
                                                 {{ form.conditionnement }}
                                                 {% if form.conditionnement.errors %}
                                                 <div class="invalid-feedback d-block">{{ form.conditionnement.errors|join:", " }}</div>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {{ form.description }}
-                                                {% if form.description.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
                                                 {% endif %}
                                             </td>
                                             <td>

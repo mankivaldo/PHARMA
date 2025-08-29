@@ -96,6 +96,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>#</th>
+                                <th>Numéro facture</th>
                                 <th>Date</th>
                                 <th>Client</th>
                                 <th>Nombre d'articles</th>
@@ -109,6 +110,7 @@
                             {% for vente in ventes %}
                             <tr>
                                 <td>{{ vente.id }}</td>
+                                <td>{{ vente.numero_facture }}</td>
                                 <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
                                 <td>{{ vente.customer.name }}</td>
                                 <td>{{ vente.Ventes.count }}</td>
@@ -127,12 +129,19 @@
                                     <a href="{% url 'detail-vente' vente.id %}" class="btn btn-info btn-sm">
                                         <i class="bi bi-eye"></i> Détails
                                     </a>
+                                    {% if not vente.annule %}
+                                    <a href="{% url 'annuler_vente' vente.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Confirmer l\'annulation de cette vente ?');">
+                                        <i class="bi bi-x-circle"></i> Annuler
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-danger">Annulée</span>
+                                    {% endif %}
                                 </td>
                                 
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center">Aucune vente enregistrée</td>
+                                <td colspan="8" class="text-center">Aucune vente enregistrée</td>
                             </tr>
                             {% endfor %}
                         </tbody>

@@ -76,7 +76,9 @@
                 
                 <div class="mt-4 d-flex justify-content-between">
                     <a href="{% url 'home' %}" class="btn btn-secondary">Retour</a>
-                    <button onclick="window.print()" class="btn btn-primary">Imprimer</button>
+                    <a href="{% url 'facture_vente' vente.id %}" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-printer"></i> Générer la facture
+                    </a>
                 </div>
             </div>
         </div>

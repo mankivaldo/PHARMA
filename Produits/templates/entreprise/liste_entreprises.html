@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Gestion des informations de l'entreprise</h2>
+    <a href="{% url 'ajouter_entreprise' %}" class="btn btn-success mb-3">Ajouter une entreprise</a>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>NIF</th>
+                <th>NC</th>
+                <th>Adresse</th>
+                <th>Téléphone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entreprise in entreprises %}
+            <tr>
+                <td>{{ entreprise.nom }}</td>
+                <td>{{ entreprise.nif }}</td>
+                <td>{{ entreprise.nc }}</td>
+                <td>{{ entreprise.adresse }}</td>
+                <td>{{ entreprise.telephone }}</td>
+                <td>
+                    <a href="{% url 'modifier_entreprise' entreprise.id %}" class="btn btn-primary btn-sm">Modifier</a>
+                    <form action="{% url 'supprimer_entreprise' entreprise.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Confirmer la suppression ?');">Supprimer</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">Aucune entreprise enregistrée</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

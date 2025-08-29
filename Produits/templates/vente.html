@@ -39,12 +39,12 @@
                         </a>
                     </li>
                 </ul>
-                
             </div>
         </div>
     </nav>
     <div class="container mt-5">
-        <h1 class="text-capitalize text-center mb-4 bg-dark text-white p-3">Enregistrer une Vente</h1>        {% if messages %}
+        <h1 class="text-capitalize text-center mb-4 bg-dark text-white p-3">Enregistrer une Vente</h1>
+        {% if messages %}
         <div class="messages mb-4">
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -67,7 +67,8 @@
                     </div>
                     {% endif %}
                 </div>
-            </div>            <div class="row mb-3">
+            </div>
+            <div class="row mb-3">
                 <div class="col-md-12">
                     {{ vente_form.statupaiement.label_tag }}
                     {{ vente_form.statupaiement }}
@@ -80,8 +81,13 @@
             </div>
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <label for="date_payement" class="form-label">Date de Paiement</label>
-                    <input type="date" name="date_payement" class="form-control" id="date_payement" disabled required>
+                    {{ vente_form.date_payement.label_tag }}
+                    {{ vente_form.date_payement }}
+                    {% if vente_form.date_payement.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ vente_form.date_payement.errors }}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
           
@@ -93,9 +99,9 @@
                             <option value="">Sélectionnez un article</option>
                             {% for stock in Stocks %}
                             <option value="{{stock.id}}" 
-                                    data-prix="{{stock.price}}" 
+                                    data-prix="{{stock.prix_achat}}" 
                                     data-quantite="{{stock.quantite}}">
-                                {{stock.produit.name}} - {{stock.price}} Fbu (Stock: {{stock.quantite}})
+                                {{stock.produit.name}} - {{stock.prix_achat}} Fbu (Stock: {{stock.quantite}})
                             </option>
                             {% endfor %}
                         </select>
@@ -142,25 +148,27 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Gestion du type de paiement
-        const paymentSelect = document.getElementById('statupaiement');
-        const datePayementInput = document.getElementById('date_payement');
-        paymentSelect.addEventListener('change', function () {
-            const value = this.value;
-            const today = new Date().toISOString().split('T')[0];
-            if (value === "C" || value === "CH") {
-                datePayementInput.disabled = false;
-                datePayementInput.value = today;
-                datePayementInput.setAttribute('min', today);
-            } else if (value === "D") {
-                datePayementInput.disabled = false;
-                datePayementInput.value = "";
-                datePayementInput.setAttribute('min', today);
-            } else {
-                datePayementInput.disabled = true;
-                datePayementInput.value = "";
-                datePayementInput.removeAttribute('min');
-            }
-        });
+        const paymentSelect = document.getElementById('id_statupaiement');
+        const datePayementInput = document.getElementById('id_date_payement');
+        if (paymentSelect && datePayementInput) {
+            paymentSelect.addEventListener('change', function () {
+                const value = this.value;
+                const today = new Date().toISOString().split('T')[0];
+                if (value === "C" || value === "CH") {
+                    datePayementInput.disabled = false;
+                    datePayementInput.value = today;
+                    datePayementInput.setAttribute('min', today);
+                } else if (value === "D" || value === "OV") {
+                    datePayementInput.disabled = false;
+                    datePayementInput.value = "";
+                    datePayementInput.setAttribute('min', today);
+                } else {
+                    datePayementInput.disabled = true;
+                    datePayementInput.value = "";
+                    datePayementInput.removeAttribute('min');
+                }
+            });
+        }
 
         // Gestion des articles dynamiques
         const articlesContainer = document.getElementById('articles-container');
@@ -246,25 +254,41 @@
             const newIndex = articleRows.length + 1;
             const newRow = articleRows[0].cloneNode(true);
             newRow.dataset.articleIndex = newIndex;
-            newRow.querySelectorAll('select, input').forEach(el => {
-                const oldId = el.id;
-                const newId = oldId.replace(/\d+/, newIndex);
-                el.id = newId;
-                el.value = '';
-                const label = newRow.querySelector(`label[for="${oldId}"]`);
-                if (label) label.setAttribute('for', newId);
+
+            // Met à jour tous les IDs et les labels associés
+            newRow.querySelectorAll('select, input, label').forEach(el => {
+                if (el.id) {
+                    const oldId = el.id;
+                    const newId = oldId.replace(/\d+$/, newIndex);
+                    el.id = newId;
+                    if (el.tagName === 'LABEL') {
+                        el.setAttribute('for', newId);
+                    }
+                }
+                // Réinitialise les valeurs des champs input/select
+                if (el.tagName === 'INPUT') {
+                    el.value = '';
+                    if (el.classList.contains('prix-total-input')) {
+                        el.value = '';
+                    }
+                    if (el.classList.contains('quantite-input')) {
+                        el.max = '';
+                        el.setAttribute('data-max-stock', '');
+                    }
+                }
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                }
             });
-            // Réinitialiser les attributs spécifiques
-            const quantiteInput = newRow.querySelector('.quantite-input');
-            quantiteInput.max = "";
-            quantiteInput.setAttribute('data-max-stock', "");
-            const articleSelect = newRow.querySelector('.article-select');
-            articleSelect.selectedIndex = 0;
+
+            // Affiche le bouton supprimer sur toutes les lignes sauf la première
             const removeButton = newRow.querySelector('.remove-article');
-            removeButton.classList.add('d-none');
+            removeButton.classList.remove('d-none');
+
             articlesContainer.appendChild(newRow);
             setupArticleRow(newRow);
             updateRemoveButtons();
+            updateTotalCommande();
         });
     });
     </script>

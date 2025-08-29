@@ -1,6 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap");
 * {
   box-sizing: border-box;
+  outline: none !important;
+}
+table, th, td {
+  border: 1px solid #000 !important;
+  outline: none !important;
 }
 
 :root {
@@ -644,7 +649,4 @@ body {
     padding: 15px;
     border-radius: 8px;
     margin-top: 20px;
-}
-* {
-  outline: 1px solid rgba(0, 0, 255, 0.1); /* aide au débug visuel */
 }

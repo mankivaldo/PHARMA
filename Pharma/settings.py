@@ -77,9 +77,9 @@ WSGI_APPLICATION = 'Pharma.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        "NAME": "PHARMA_NAPO",
+        "NAME": "efapharma",
         "USER": "postgres",
-        "PASSWORD": "23162428",
+        "PASSWORD": "efapharma24",
         "HOST": "localhost",
         "PORT": "5432",
 

@@ -2,10 +2,12 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import Categories, Produits, Condition, Stockes, Customer, Vente, VenteProduit, CustomUser, ModificationStock, Fournisseur, Achat, AchatLigne
 from django.utils.html import format_html
+from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 
 # Classe Admin pour Stockes
 class StockesAdmin(admin.ModelAdmin):
-    list_display = ('produit', 'get_lot', 'get_prix_achat', 'prix_vente', 'get_conditionnement', 'quantite', 
+    list_display = ('produit', 'get_lot', 'get_prix_achat', 'get_conditionnement', 'quantite', 
                    'stock_status_colored', 'get_date_expiration', 'get_date_ajout')
     list_filter = ('achat_ligne__conditionnement', 'achat_ligne__date_ajout')
     search_fields = ['produit__name', 'achat_ligne__description', 'achat_ligne__lot']
@@ -16,9 +18,9 @@ class StockesAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Informations principales', {
             'fields': ('produit', 'quantite', 'stock_minimum')
-        }),
-        ('Prix', {
-            'fields': ('prix_vente', 'achat_ligne'),
+        })
+        , ('Achat', {
+            'fields': ('achat_ligne',)
         })
     )
 
@@ -156,6 +158,20 @@ class CustomUserAdmin(UserAdmin):
     )
     search_fields = ('username', 'email')
     ordering = ('username',)
+
+    actions = ['reset_password_action']
+
+    def reset_password_action(self, request, queryset):
+        """
+        Action admin pour réinitialiser le mot de passe des utilisateurs sélectionnés.
+        Définit un mot de passe temporaire 'efa2025' (à personnaliser si besoin).
+        """
+        temp_password = 'efa2025'
+        for user in queryset:
+            user.set_password(temp_password)
+            user.save()
+        self.message_user(request, _(f"Le mot de passe a été réinitialisé pour {queryset.count()} utilisateur(s). Mot de passe temporaire : {temp_password}"), messages.SUCCESS)
+    reset_password_action.short_description = "Réinitialiser le mot de passe (mot de passe temporaire : efa2025)"
 
 # Classe Inline pour AchatLigne
 class AchatLigneInline(admin.TabularInline):

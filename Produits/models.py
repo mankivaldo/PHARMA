@@ -6,6 +6,21 @@ from django.utils.timezone import now
 from django.utils import timezone 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import re
+
+# Modèle pour les informations de l'entreprise
+class Entreprise(models.Model):
+    nom = models.CharField(max_length=255)
+    nif = models.CharField(max_length=100)
+    nc = models.CharField(max_length=100)
+    nom_tva = models.CharField(max_length=255, blank=True, null=True)
+    adresse = models.CharField(max_length=255)
+    telephone = models.CharField(max_length=50, blank=True, null=True)
+    info_bancaire = models.CharField(max_length=255, blank=True, null=True)
+    logo = models.ImageField(upload_to='image/', blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
 
 class CustomUser(AbstractUser):
     telephone = models.CharField(max_length=15, blank=True, null=True)
@@ -45,13 +60,21 @@ class Categories(models.Model):
         verbose_name_plural = "Categories"
 
 
+from django.utils.text import slugify
+
 class Produits(models.Model):
     name = models.CharField(max_length=250)
+    slug = models.SlugField(max_length=255, unique=True)
     categorie = models.ForeignKey(Categories, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
-    
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name_plural = "Produits"
 
@@ -66,7 +89,7 @@ class Condition(models.Model):
 class Stockes(models.Model):
     produit = models.ForeignKey(Produits, on_delete=models.CASCADE)
     quantite = models.PositiveIntegerField(default=0)
-    prix_vente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    prix_achat = models.PositiveIntegerField(default=0)
     stock_minimum = models.PositiveIntegerField(default=5, help_text="Quantité minimale avant alerte")
     achat_ligne = models.ForeignKey('AchatLigne', on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -88,10 +111,7 @@ class Stockes(models.Model):
     def date_expiration(self):
         return self.achat_ligne.date_expiration if self.achat_ligne else None
 
-    @property
-    def prix_achat(self):
-        return self.achat_ligne.prix_achat if self.achat_ligne else None
-
+    
     @property
     def description(self):
         return self.achat_ligne.description if self.achat_ligne else None
@@ -103,6 +123,24 @@ class Stockes(models.Model):
     @property
     def date_ajout(self):
         return self.achat_ligne.date_ajout if self.achat_ligne else None
+    @property
+    def statut_quantite(self):
+        if self.quantite > self.stock_minimum:
+            return 'green'
+        elif self.quantite > 0:
+            return 'orange'
+        else:
+            return 'red'
+    @property
+    def est_expire(self):
+        """Retourne True si le stock est expiré."""
+        if self.date_expiration:
+            return self.date_expiration < timezone.now().date()
+        return False
+
+    @property
+    def statut_expiration(self):
+        return "expiré" if self.est_expire else "valide"
 
 
 class Customer(models.Model):
@@ -125,10 +163,12 @@ class Vente(models.Model):
     PAYMENT_STATUS_CASH = 'C'
     PAYMENT_STATUS_DETTE = 'D'
     PAYMENT_STATUS_CHEQUE = 'CH'
+    PAYMENT_STATUS_ORDRE_DE_VIREMENT='OV'
     PAYMENT_STATUS_CHOICES = [
         (PAYMENT_STATUS_CASH, 'Cash'),
         (PAYMENT_STATUS_DETTE, 'Dette'),
-        (PAYMENT_STATUS_CHEQUE, 'Cheque')
+        (PAYMENT_STATUS_CHEQUE, 'Cheque'),
+        (PAYMENT_STATUS_ORDRE_DE_VIREMENT, 'OV')
     ]
 
     date_vente = models.DateTimeField(default=timezone.now)
@@ -136,6 +176,8 @@ class Vente(models.Model):
     statupaiement = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_CASH)
     vendeur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventes_effectuees', null=True, blank=True)
     date_payement = models.DateTimeField(null=True, blank=True)
+    annule = models.BooleanField(default=False, verbose_name="Annulée")
+    numero_facture = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name="Numéro de facture")
 
     def clean(self):
         # Vérifier la logique de date_payement
@@ -143,14 +185,25 @@ class Vente(models.Model):
             # Si le statut est Cash ou Chèque, la date de paiement doit être aujourd'hui
             if self.date_payement and self.date_payement.date() != now().date():
                 raise ValidationError("Pour un paiement en Cash ou Chèque, la date de paiement doit être aujourd'hui.")
-        elif self.statupaiement == self.PAYMENT_STATUS_DETTE:
+        elif self.statupaiement in  [self.PAYMENT_STATUS_DETTE, self.PAYMENT_STATUS_ORDRE_DE_VIREMENT]:
             # Si le statut est Dette, la date de paiement doit être dans le futur
             if self.date_payement and self.date_payement.date() <= now().date():
-                raise ValidationError("Pour un paiement en Dette, la date de paiement doit être supérieure à la date du jour.")
+                raise ValidationError("Pour un paiement en Dette ou OV, la date de paiement doit être supérieure à la date du jour.")
 
-    def save(self, *args, **kwargs):
-        # Appeler la méthode clean avant de sauvegarder
-        self.clean()
+    def save(self, *args, validate=True, **kwargs):
+        if validate:
+            self.clean()
+        if not self.numero_facture:
+            # Cherche le plus grand numéro existant
+            last_num = 0
+            factures = Vente.objects.filter(numero_facture__startswith='FAC-')
+            for v in factures:
+                match = re.match(r'FAC-(\d+)', v.numero_facture or '')
+                if match:
+                    num = int(match.group(1))
+                    if num > last_num:
+                        last_num = num
+            self.numero_facture = f"FAC-{last_num + 1:05d}"
         super().save(*args, **kwargs)
 
     def get_total_amount(self):
@@ -210,9 +263,9 @@ class ModificationStock(models.Model):
     date_modification = models.DateTimeField(auto_now_add=True)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='modifications_stock')
     raison = models.CharField(max_length=255, blank=True, null=True)
-    
+  
     def __str__(self):
-        return f"{self.get_type_modification_display()} - {self.produit.produit.name} ({self.quantite})"
+        return f"{self.get_type_modification_display()} - {self.produit.produit.name} ({self.quantite}) [Lot: {self.lot}]"
     
     class Meta:
         verbose_name = "Modification de stock"
@@ -234,7 +287,7 @@ class Achat(models.Model):
     date_achat = models.DateTimeField(default=timezone.now)
     facture = models.CharField(max_length=100, blank=True)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='achats_effectues')
-    # ...
+    annule = models.BooleanField(default=False, verbose_name="Annulé")
 
     def __str__(self):
         return f"Achat {self.id} - {self.fournisseur.nom} ({self.date_achat.date()})"
@@ -247,7 +300,6 @@ class AchatLigne(models.Model):
     lot = models.CharField(max_length=250, blank=True, null=True)
     date_expiration = models.DateField(blank=True, null=True)
     conditionnement = models.ForeignKey(Condition, on_delete=models.CASCADE, default=1)  # Utilise l'ID 1 comme valeur par défaut
-    description = models.TextField(blank=True)
     date_ajout = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

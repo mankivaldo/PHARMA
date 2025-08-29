@@ -1,0 +1,168 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PharmaSys - Gestion de Pharmacie</title>    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css.css'%}" />
+     <link rel="stylesheet" href="{% static 'style.css'%}" />
+    <link rel="stylesheet" href="{% static 'font/bootstrap-icons.min.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .facture-container, .facture-container * {
+        visibility: visible;
+    }
+    .facture-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+        border: none;
+        background: #fff;
+    }
+    .no-print {
+        display: none !important;
+    }
+    table, th, td {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    a {
+        color: #000 !important;
+        text-decoration: none !important;
+    }
+}
+.facture-container {
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    box-shadow: 0 0 10px #ccc;
+    width: 800px;
+    max-width: 100%;
+}
+table {
+    margin: 0 auto;
+    width: 90%;
+    border-collapse: collapse;
+}
+</style>
+  
+</head>
+<body>
+{% block content %}
+        <div class="container my-4" id="facture">
+            <div class="facture-container">
+                <div class="row">
+                    <div class="col-6">
+                        <!-- Logo -->
+                        <img src="{% static 'image/logo.jpg' %}" alt="Logo" style="max-width: 120px;">
+                        <!-- Infos entreprise -->
+                        <div class="mt-2">
+                            <strong>{{ entreprise.nom }}</strong><br>
+                            NIF : {{ entreprise.nif }}<br>
+                            NC : {{ entreprise.nc }}<br>
+                            Assujetti à la TVA : {{ entreprise.nom_tva }}<br>
+                            Adresse : {{ entreprise.adresse }}<br>
+                            Téléphone : {{ entreprise.telephone }}<br>
+                            Info bancaire : {{ entreprise.info_bancaire }}
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="mb-2">
+                            <span class="fs-5">Facture N° {{ vente.numero_facture }}</span>
+                        </div>
+                        <div class="mb-2">
+                            <span>Date : {{ vente.date_vente|date:'d/m/Y' }}</span>
+                        </div>
+                        <div>
+                            <em>{{ phrase }}</em>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <!-- Infos client -->
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h5>Client</h5>
+                        <strong>{{ vente.customer.name }}</strong><br>
+                        Adresse : {{ vente.customer.address }}<br>
+                        Téléphone : {{ vente.customer.phone }}<br>
+                        NIF : {{ vente.customer.NIF }}
+                    </div>
+                </div>
+                <!-- Tableau des articles -->
+                <div class="row">
+                    <div class="col-12">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    
+                                    <th>Lot</th>
+                                    <th>Conditionnement</th>
+                                    <th>Date Exp.</th>
+                                    
+                                    <th>Quantité</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in vente.lignes.all %}
+                                <tr>
+                                    <td>{{ ligne.produit.produit.name }}</td>
+                                    <td>{{ ligne.produit.lot }}</td>
+                                    <td>{{ ligne.produit.conditionnement }}</td>
+                                    <td>{{ ligne.produit.date_expiration|date:'d/m/Y' }}</td>
+                                    <td>{{ ligne.quantite }}</td>
+                                    <td>{{ ligne.prix_vente }} Fbu</td>
+                                    <td>{{ ligne.total_price }} Fbu</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="6" class="text-end">Total</th>
+                                    <th>{{ vente.get_total_amount }} Fbu</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <!-- Footer -->
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <small>Merci pour votre confiance !</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print button -->
+            <div class="row mt-3" no-print>
+                <div class="col-12 text-center">
+                    <button class="btn btn-success" onclick="window.print();">
+                        <i class="bi bi-printer"></i> Imprimer la facture
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+        <script src="{% static 'js/layout.js' %}"></script>
+        <script src="{% static 'script.js' %}"></script>
+        <script src="{% static 'bootstrap.min.js' %}"></script>
+</body>
+</html>

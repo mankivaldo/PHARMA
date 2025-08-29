@@ -43,17 +43,7 @@
             {% endif %}
           </div>
 
-          <div class="col-md-6">
-            <label for="{{ form.prix_vente.id_for_label }}" class="form-label">Prix de vente</label>
-            {{ form.prix_vente }}
-            {% if form.prix_vente.errors %}
-            <div class="invalid-feedback d-block">
-              {% for error in form.prix_vente.errors %}
-                {{ error }}
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
+    
 
           <div class="col-md-6">
             <label for="{{ form.stock_minimum.id_for_label }}" class="form-label">Stock minimum</label>

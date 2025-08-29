@@ -14,34 +14,42 @@
     <div class="content scroll-y smooth-scroll">
         <div class="container-fluid">
             <!-- Première ligne: Statistiques générales -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-5 g-4 mb-4">
+                <div class="col">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center">
                             <h5><i class="fas fa-box"></i> Total Produits</h5>
                             <h3>{{ total_produits }}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body">
+                <div class="col">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center">
                             <h5><i class="fas fa-exclamation-triangle"></i> Stock Faible</h5>
                             <h3>{{ stock_faible }}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-danger text-white">
-                        <div class="card-body">
+                <div class="col">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                            <h5><i class="fas fa-hourglass-half"></i> Proche Expiration</h5>
+                            <h3>{{ produits_proche_expiration }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card bg-danger text-white h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center">
                             <h5><i class="fas fa-calendar-times"></i> Produits Expirés</h5>
                             <h3>{{ produits_expires }}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
+                <div class="col">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center">
                             <h5><i class="fas fa-shopping-cart"></i> Ventes du mois</h5>
                             <h3>{{ ventes_mois }}</h3>
                         </div>

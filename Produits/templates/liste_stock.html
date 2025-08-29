@@ -26,36 +26,44 @@
     
     <!-- Statistiques des stocks -->
     <div class="card-body border-bottom">
-      <div class="row g-4 mb-4">
-        <div class="col-md-3">
+      <div class="row row-cols-1 row-cols-md-5 g-4 mb-4">
+        <div class="col">
           <div class="card bg-primary text-white h-100">
             <div class="card-body">
               <h6 class="card-title">Total Produits</h6>
-              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+              <h2 class="card-text mb-0">{{ total_produits }}</h2>
             </div>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col">
           <div class="card bg-success text-white h-100">
             <div class="card-body">
-              <h6 class="card-title">En Stock</h6>
-              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+              <h6 class="card-title">En Stock (disponibles)</h6>
+              <h2 class="card-text mb-0">{{ nb_en_stock_disponible }}</h2>
             </div>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col">
           <div class="card bg-warning text-white h-100">
             <div class="card-body">
-              <h6 class="card-title">Stock Limité</h6>
-              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+              <h6 class="card-title">Stock Limité (disponibles)</h6>
+              <h2 class="card-text mb-0">{{ nb_limite_disponible }}</h2>
             </div>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col">
           <div class="card bg-danger text-white h-100">
             <div class="card-body">
               <h6 class="card-title">En Rupture</h6>
-              <h2 class="card-text mb-0">{{ object_list|length }}</h2>
+              <h2 class="card-text mb-0">{{ nb_rupture }}</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card bg-dark text-white h-100">
+            <div class="card-body">
+              <h6 class="card-title">Produits Expirés</h6>
+              <h2 class="card-text mb-0">{{ nb_expire }}</h2>
             </div>
           </div>
         </div>
@@ -71,143 +79,180 @@
         </div>
         <div class="col-md-8 text-end">
           <div class="btn-group">
-            <button type="button" class="btn btn-outline-primary" data-filter="all">Tous</button>
-            <button type="button" class="btn btn-outline-success" data-filter="en-stock">En stock</button>
-            <button type="button" class="btn btn-outline-warning" data-filter="limite">Stock limité</button>
-            <button type="button" class="btn btn-outline-danger" data-filter="rupture">Rupture</button>
+            <a href="?" class="btn btn-outline-primary {% if not filtre_statut_exp and not filtre_produit %}active{% endif %}">Tous</a>
+            <a href="?statut_exp=valide&statut_q=green" class="btn btn-outline-success {% if request.GET.statut_q == 'green' %}active{% endif %}">En stock</a>
+            <a href="?statut_exp=valide&statut_q=orange" class="btn btn-outline-warning {% if request.GET.statut_q == 'orange' %}active{% endif %}">Stock limité</a>
+            <a href="?statut_exp=valide&statut_q=red" class="btn btn-outline-danger {% if request.GET.statut_q == 'red' %}active{% endif %}">Rupture</a>
           </div>
         </div>
       </div>
+
+      <!-- Filtres rapides Expiré/Disponible -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-12 text-end">
+          <div class="btn-group">
+            <a href="?statut_exp=expire" class="btn btn-danger {% if filtre_statut_exp == 'expire' %}active{% endif %}"><i class="bi bi-exclamation-octagon me-1"></i> Expirés</a>
+            <a href="?statut_exp=valide" class="btn btn-success {% if filtre_statut_exp == 'valide' or not filtre_statut_exp %}active{% endif %}"><i class="bi bi-check-circle me-1"></i> Disponibles</a>
+          </div>
+        </div>
+      </div>
+      <!-- Formulaire de filtre avancé (masqué pour simplifier l'UX) -->
+      <form method="get" class="row g-3 align-items-end mb-4 d-none" id="filtreForm">
+        <div class="col-md-4">
+          <label for="filtre_statut_expiration" class="form-label mb-1">Statut d'expiration</label>
+          <select name="statut_expiration" id="filtre_statut_expiration" class="form-select filtre-auto">
+            <option value="">Tous</option>
+            <option value="valide" {% if filtre_statut_expiration == 'valide' %}selected{% endif %}>Valide</option>
+            <option value="proche" {% if filtre_statut_expiration == 'proche' %}selected{% endif %}>Proche expiration</option>
+            <option value="expire" {% if filtre_statut_expiration == 'expire' %}selected{% endif %}>Expiré</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="filtre_produit" class="form-label mb-1">Produit</label>
+          <select name="produit" id="filtre_produit" class="form-select filtre-auto">
+            <option value="">Tous</option>
+            {% for produit in produits %}
+              <option value="{{ produit.pk }}" {% if filtre_produit == produit.pk|stringformat:'s' %}selected{% endif %}>{{ produit }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4 d-none">
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+        </div>
+      </form>
     </div>
     
     <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th scope="col">Produit <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
-              <th scope="col">Statut & Quantité <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
-              <th scope="col">Prix <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
-              <th scope="col">Lot <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
-              <th scope="col">Date d'expiration <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for x in object_list %}
-            <tr data-status="{% if x.statut_quantite == 'green' %}en-stock{% elif x.statut_quantite == 'orange' %}limite{% else %}rupture{% endif %}">
-              <td>
-                <div class="d-flex align-items-center">
-                  <div>
-                    <h6 class="mb-0">{{ x.produit }}</h6>
-                    <small class="text-muted">{{ x.description|truncatechars:50 }}</small>
-                  </div>
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Produit <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+            <th scope="col">Statut & Quantité <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+            <th scope="col">Prix <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+            <th scope="col">Lot <i class="bi bi-arrow-down-up text-muted ms-1"></i></th>
+            <th scope="col">Date d'expiration</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for x in object_list %}
+          <tr data-status="{% if x.statut_quantite == 'green' %}en-stock{% elif x.statut_quantite == 'orange' %}limite{% else %}rupture{% endif %}">
+            <td>
+              <div class="d-flex align-items-center">
+                <div>
+                  <h6 class="mb-0">{{ x.produit }}</h6>
+                  <small class="text-muted">{{ x.description|truncatechars:50 }}</small>
                 </div>
-              </td>
-              <td>
-                <div class="d-flex align-items-center">
-                  {% if x.statut_quantite == 'green' %}
-                  <span class="badge bg-success me-2">En stock</span>
-                  {% elif x.statut_quantite == 'orange' %}
-                  <span class="badge bg-warning me-2">Stock limité</span>
-                  {% else %}
-                  <span class="badge bg-danger me-2">Rupture</span>
-                  {% endif %}
-                  <strong>{{ x.quantite }}</strong>
-                </div>
-              </td>
-              <td>{{ x.price }} Fbu</td>
-              <td>{{ x.lot }}</td>
-              <td>{{ x.date_expiration|date:"d/m/Y" }}</td>
-              <td>
-                <div class="btn-group">
-                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exampleModal-{{ x.pk }}" title="Détails">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <a href="{% url 'modifier' x.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
-                    <i class="bi bi-pencil"></i>
-                  </a>
-                  <button class="btn btn-sm btn-outline-danger" title="Supprimer">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                {% if x.statut_quantite == 'green' %}
+                <span class="badge bg-success me-2">En stock</span>
+                {% elif x.statut_quantite == 'orange' %}
+                <span class="badge bg-warning me-2">Stock limité</span>
+                {% else %}
+                <span class="badge bg-danger me-2">Rupture</span>
+                {% endif %}
+                <strong>{{ x.quantite }}</strong>
+              </div>
+            </td>
+            <td>{{ x.price }} Fbu</td>
+            <td>{{ x.lot }}</td>
+            <td>
+              <span class="fw-bold">{{ x.date_expiration|date:"d/m/Y" }}</span>
+              {% if x.statut_expiration == 'expire' %}
+                <span class="badge bg-danger ms-1">Expiré</span>
+              {% elif x.statut_expiration == 'proche' %}
+                <span class="badge bg-warning text-dark ms-1">Proche expiration</span>
+              {% else %}
+                <span class="badge bg-success ms-1">Valide</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exampleModal-{{ x.pk }}" title="Détails">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
 
-            <!-- Modal Détails -->
-            <div class="modal fade" id="exampleModal-{{ x.pk }}" tabindex="-1" aria-labelledby="exampleModalLabel-{{ x.pk }}" aria-hidden="true">
-              <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="exampleModalLabel">Détails du produit: {{ x.produit }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                    <div class="row g-4">
-                      <div class="col-md-6">
-                        <div class="card h-100">
-                          <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">Informations générales</h6>
-                            <dl class="row mb-0">
-                              <dt class="col-sm-4">Produit</dt>
-                              <dd class="col-sm-8">{{ x.produit }}</dd>
-                              
-                              <dt class="col-sm-4">Prix</dt>
-                              <dd class="col-sm-8">{{ x.price }} Fbu</dd>
-                              
-                              <dt class="col-sm-4">Quantité</dt>
-                              <dd class="col-sm-8">{{ x.quantite }}</dd>
-                              
-                              <dt class="col-sm-4">Statut</dt>
-                              <dd class="col-sm-8">
-                                {% if x.statut_quantite == 'green' %}
-                                <span class="badge bg-success">En stock</span>
-                                {% elif x.statut_quantite == 'orange' %}
-                                <span class="badge bg-warning">Stock limité</span>
-                                {% else %}
-                                <span class="badge bg-danger">Rupture de stock</span>
-                                {% endif %}
-                              </dd>
-                            </dl>
-                          </div>
+          <!-- Modal Détails -->
+          <div class="modal fade" id="exampleModal-{{ x.pk }}" tabindex="-1" aria-labelledby="exampleModalLabel-{{ x.pk }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title fw-bold" id="exampleModalLabel">Détails du produit: {{ x.produit }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="row g-4">
+                    <div class="col-md-6">
+                      <div class="card h-100">
+                        <div class="card-body">
+                          <h6 class="card-subtitle mb-2 text-muted">Informations générales</h6>
+                          <dl class="row mb-0">
+                            <dt class="col-sm-4">Produit</dt>
+                            <dd class="col-sm-8">{{ x.produit }}</dd>
+                            <dt class="col-sm-4">Prix</dt>
+                            <dd class="col-sm-8">{{ x.prix_achat }} Fbu</dd>
+                            <dt class="col-sm-4">Quantité</dt>
+                            <dd class="col-sm-8">{{ x.quantite }}</dd>
+                            <dt class="col-sm-4">Statut</dt>
+                            <dd class="col-sm-8">
+                              {% if x.statut_quantite == 'green' %}
+                              <span class="badge bg-success">En stock</span>
+                              {% elif x.statut_quantite == 'orange' %}
+                              <span class="badge bg-warning">Stock limité</span>
+                              {% else %}
+                              <span class="badge bg-danger">Rupture de stock</span>
+                              {% endif %}
+                            </dd>
+                            <dt class="col-sm-4">Statut expiration</dt>
+                            <dd class="col-sm-8">
+                              {% if x.statut_expiration == 'expire' %}
+                                <span class="badge bg-danger">Expiré</span>
+                              {% elif x.statut_expiration == 'proche' %}
+                                <span class="badge bg-warning text-dark">Proche expiration</span>
+                              {% else %}
+                                <span class="badge bg-success">Valide</span>
+                              {% endif %}
+                            </dd>
+                          </dl>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <div class="card h-100">
-                          <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">Dates & Description</h6>
-                            <dl class="row mb-0">
-                              <dt class="col-sm-4">Date d'ajout</dt>
-                              <dd class="col-sm-8">{{ x.date_ajout|date:"d/m/Y" }}</dd>
-                              
-                              <dt class="col-sm-4">Date d'expiration</dt>
-                              <dd class="col-sm-8">{{ x.date_expiration|date:"d/m/Y" }}</dd>
-
-                              <dt class="col-sm-4">Lot</dt>
-                              <dd class="col-sm-8">{{ x.lot }}</dd>
-                              
-                              <dt class="col-sm-4">Conditionnement</dt>
-                              <dd class="col-sm-8">{{ x.condisionnement }}</dd>
-                              
-                              <dt class="col-sm-4">Description</dt>
-                              <dd class="col-sm-8">{{ x.description }}</dd>
-                            </dl>
-                          </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="card h-100">
+                        <div class="card-body">
+                          <h6 class="card-subtitle mb-2 text-muted">Dates & Description</h6>
+                          <dl class="row mb-0">
+                            <dt class="col-sm-4">Date d'ajout</dt>
+                            <dd class="col-sm-8">{{ x.date_ajout|date:"d/m/Y" }}</dd>
+                            <dt class="col-sm-4">Date d'expiration</dt>
+                            <dd class="col-sm-8">{{ x.date_expiration|date:"d/m/Y" }}</dd>
+                            <dt class="col-sm-4">Lot</dt>
+                            <dd class="col-sm-8">{{ x.lot }}</dd>
+                            <dt class="col-sm-4">Conditionnement</dt>
+                            <dd class="col-sm-8">{{ x.condisionnement }}</dd>
+                            <dt class="col-sm-4">Description</dt>
+                            <dd class="col-sm-8">{{ x.description }}</dd>
+                          </dl>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                    <a href="{% url 'modifier' x.pk %}" class="btn btn-primary">Modifier</a>
-                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 </div>
               </div>
             </div>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -254,15 +299,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Recherche
     const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('keyup', function() {
-        const searchText = this.value.toLowerCase();
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchText) ? '' : 'none';
-        });
-    });
+    if (searchInput) {
+      searchInput.addEventListener('keyup', function() {
+          const searchText = this.value.toLowerCase();
+          const rows = document.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+              const text = row.textContent.toLowerCase();
+              row.style.display = text.includes(searchText) ? '' : 'none';
+          });
+      });
+    }
 
     // Filtres
     const filterButtons = document.querySelectorAll('[data-filter]');
@@ -270,11 +316,8 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const filter = this.getAttribute('data-filter');
             const rows = document.querySelectorAll('tbody tr');
-
-            // Activer/désactiver les boutons
             filterButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
-
             rows.forEach(row => {
                 if (filter === 'all' || row.getAttribute('data-status') === filter) {
                     row.style.display = '';
@@ -282,6 +325,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.style.display = 'none';
                 }
             });
+        });
+    });
+
+    // Auto-filtrage sur changement des filtres avancés
+    var selects = document.querySelectorAll('.filtre-auto');
+    selects.forEach(function(select) {
+        select.addEventListener('change', function() {
+            document.getElementById('filtreForm').submit();
         });
     });
 

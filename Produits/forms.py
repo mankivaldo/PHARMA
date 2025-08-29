@@ -5,14 +5,16 @@ from .models import *
 class ProduitForm(forms.ModelForm):
     class Meta:
         model = Produits
-        fields = ['name', 'categorie']
+        fields = ['name', 'categorie', 'slug']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'categorie': forms.Select(attrs={'class': 'form-control'})
+            'categorie': forms.Select(attrs={'class': 'form-control'}),
+            'slug': forms.HiddenInput()
         }
         labels = {
             'name': 'Nom du produit',
-            'categorie': 'Catégorie'
+            'categorie': 'Catégorie',
+            'slug': 'Slug (généré automatiquement)'
         }
 
 
@@ -93,7 +95,13 @@ class VenteForm(forms.ModelForm):
             'statupaiement': 'Mode de paiement',
             'date_payement': 'Date de paiement'
         }
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ajoute le mot d'invitation
+        self.fields['statupaiement'].widget.choices = [('', 'Choisissez le mode de paiement')] + list(self.fields['statupaiement'].choices)
+         # Force la valeur initiale à vide si ce n'est pas un POST (pour l'affichage du formulaire vierge)
+        if not self.is_bound:
+            self.fields['statupaiement'].initial = ''
     def clean(self):
         cleaned_data = super().clean()
         statupaiement = cleaned_data.get('statupaiement')
@@ -105,12 +113,12 @@ class VenteForm(forms.ModelForm):
         if statupaiement in ['C', 'CH']:
             # Pour Cash ou Chèque, on force la date à aujourd'hui
             cleaned_data['date_payement'] = timezone.now()
-        elif statupaiement == 'D':
+        elif statupaiement in ['D', 'OV']:
             # Validation pour une dette
             if not date_payement:
                 raise forms.ValidationError("La date de paiement est requise pour une dette.")
             elif date_payement.date() <= timezone.now().date():
-                raise forms.ValidationError("Pour une dette, la date de paiement doit être dans le futur.")
+                raise forms.ValidationError("Pour une dette et ordre de virement, la date de paiement doit être dans le futur.")
 
         return cleaned_data
 
@@ -118,7 +126,8 @@ class VenteForm(forms.ModelForm):
 class VenteProduitForm(forms.ModelForm):
     class Meta:
         model = VenteProduit
-        fields = ['produit', 'quantite', 'prix_vente']
+        fields = ['produit', 'quantite', 'prix_vente'
+        ]
         widgets = {
             'produit': forms.Select(attrs={
                 'class': 'form-control',
@@ -209,7 +218,7 @@ class AchatForm(forms.ModelForm):
 class AchatLigneForm(forms.ModelForm):
     class Meta:
         model = AchatLigne
-        fields = ['produit', 'quantite', 'prix_achat', 'lot', 'date_expiration', 'conditionnement', 'description']
+        fields = ['produit', 'quantite', 'prix_achat', 'lot', 'date_expiration', 'conditionnement']
         widgets = {
             'produit': forms.Select(attrs={'class': 'form-control'}),
             'quantite': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -217,7 +226,7 @@ class AchatLigneForm(forms.ModelForm):
             'lot': forms.TextInput(attrs={'class': 'form-control'}),
             'date_expiration': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'conditionnement': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+            
         }
         labels = {
             'produit': 'Produit',
@@ -226,24 +235,22 @@ class AchatLigneForm(forms.ModelForm):
             'lot': 'Numéro de lot',
             'date_expiration': 'Date d\'expiration',
             'conditionnement': 'Conditionnement',
-            'description': 'Description'
+         
         }
 
 class StockForm(forms.ModelForm):
     class Meta:
         model = Stockes
-        fields = ['produit', 'quantite', 'prix_vente', 'stock_minimum', 'achat_ligne']
+        fields = ['produit', 'quantite', 'stock_minimum', 'achat_ligne']
         widgets = {
             'produit': forms.Select(attrs={'class': 'form-control'}),
             'quantite': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prix_vente': forms.NumberInput(attrs={'class': 'form-control'}),
             'stock_minimum': forms.NumberInput(attrs={'class': 'form-control'}),
             'achat_ligne': forms.Select(attrs={'class': 'form-control'})
         }
         labels = {
             'produit': 'Produit',
             'quantite': 'Quantité',
-            'prix_vente': 'Prix de vente',
             'stock_minimum': 'Stock minimum',
             'achat_ligne': 'Ligne d\'achat'
         }
@@ -293,4 +300,37 @@ class AjustementStockForm(forms.Form):
                 raise forms.ValidationError("La nouvelle quantité est identique à l'ancienne")
 
         return cleaned_data
+
+    def save(self, utilisateur):
+        """
+        Applique la modification de stock selon le type choisi et journalise l'opération.
+        """
+        stock = self.cleaned_data['stock']
+        nouvelle_quantite = self.cleaned_data['nouvelle_quantite']
+        type_modification = self.cleaned_data['type_modification']
+        raison = self.cleaned_data['raison']
+
+        if type_modification == 'ENTREE':
+            stock.quantite += nouvelle_quantite
+            quantite_modifiee = nouvelle_quantite
+        elif type_modification == 'SORTIE':
+            stock.quantite -= nouvelle_quantite
+            quantite_modifiee = nouvelle_quantite
+        elif type_modification == 'AJUSTEMENT':
+            quantite_modifiee = nouvelle_quantite
+            stock.quantite = nouvelle_quantite
+        else:
+            raise ValueError("Type de modification inconnu")
+
+        stock.save()
+
+        ModificationStock.objects.create(
+            produit=stock,
+            type_modification=type_modification,
+            quantite=quantite_modifiee,
+            utilisateur=utilisateur,
+            raison=raison,
+            lot=stock.lot
+        )
+        return stock
 

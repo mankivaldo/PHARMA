@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth.decorators import login_required
 from .views import *
+from .views_entreprise import *
 
 
 urlpatterns = [
@@ -16,8 +17,8 @@ urlpatterns = [
     path('liste-ventes/', login_required(ListeVentesView.as_view(), login_url='connexion'), name='liste_ventes'),
     path('produit/nouveau/', login_required(produit_form), name='produit_nouveau'),
     path('produits/', login_required(produit_list), name='produit_list'),
-    path('produit/<str:name>/edit/', login_required(produit_form), name='produit_form'),
-    path('produit/<str:name>/', login_required(produit_detail), name='produit_detail'),
+    path('produit/<slug:slug>/edit/', login_required(produit_form), name='produit_form'),
+    path('produit/<slug:slug>/', login_required(produit_detail), name='produit_detail'),
     
     # Gestion des utilisateurs
     path('utilisateurs/', login_required(liste_utilisateurs), name='liste_utilisateurs'),
@@ -52,11 +53,23 @@ urlpatterns = [
     # Gestion des stocks
     path('stocks/', login_required(ListeStockView.as_view()), name='liste_stock'),
     path('stock/ajuster/', login_required(ajuster_stock), name='ajuster_stock'),
-    path('stock/<int:pk>/modifier/', login_required(modifier_stock), name='modifier'),
-    
+   
     # URLs pour les fournisseurs
     path('fournisseurs/', login_required(liste_fournisseurs), name='liste_fournisseurs'),
     path('fournisseur/ajouter/', login_required(ajouter_fournisseur), name='ajouter_fournisseur'),
     path('fournisseur/<int:pk>/modifier/', login_required(modifier_fournisseur), name='modifier_fournisseur'),
     path('fournisseur/<int:pk>/supprimer/', login_required(supprimer_fournisseur), name='supprimer_fournisseur'),
+
+    # Annuler vente et achat
+    path('vente/<int:pk>/annuler/', login_required(annuler_vente), name='annuler_vente'),
+    path('achat/<int:pk>/annuler/', login_required(annuler_achat), name='annuler_achat'),
+
+    # Facture vente
+    path('facture-vente/<int:pk>/', login_required(facture_vente_view), name='facture_vente'),
+
+    # Gestion des entreprises
+    path('entreprises/', login_required(liste_entreprises), name='liste_entreprises'),
+    path('entreprise/ajouter/', login_required(ajouter_entreprise), name='ajouter_entreprise'),
+    path('entreprise/<int:pk>/modifier/', login_required(modifier_entreprise), name='modifier_entreprise'),
+    path('entreprise/<int:pk>/supprimer/', login_required(supprimer_entreprise), name='supprimer_entreprise'),
 ]
