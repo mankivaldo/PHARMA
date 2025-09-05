@@ -54,7 +54,7 @@ def produit_form(request, name=None):
             
         if form.is_valid():
             form.save()
-            return redirect('produit_detail', name=form.instance.name)
+            return redirect('produit_detail', slug=form.instance.slug)
     
     return render(request, 'produit_form.html', {'form': form})
 

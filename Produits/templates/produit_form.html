@@ -160,6 +160,17 @@
             
             <form class="form-card" method="post" novalidate>
               {% csrf_token %}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <ul>
+            {% for field, errors in form.errors.items %}
+              {% for error in errors %}
+                <li>{{ field }}: {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
               
               <div class="row justify-content-between text-left">
                 <div class="form-group col-sm-6 flex-column d-flex">

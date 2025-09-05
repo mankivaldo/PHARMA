@@ -17,6 +17,10 @@ class ProduitForm(forms.ModelForm):
             'slug': 'Slug (généré automatiquement)'
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['slug'].required = False
+
 
 class AjoutVente(forms.Form):
     quantite = forms.IntegerField(min_value=1)
