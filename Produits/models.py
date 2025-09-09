@@ -164,10 +164,12 @@ class Vente(models.Model):
     PAYMENT_STATUS_DETTE = 'D'
     PAYMENT_STATUS_CHEQUE = 'CH'
     PAYMENT_STATUS_ORDRE_DE_VIREMENT='OV'
+    PAYMENT_STATUS_PAYER = 'P'
     PAYMENT_STATUS_CHOICES = [
         (PAYMENT_STATUS_CASH, 'Cash'),
         (PAYMENT_STATUS_DETTE, 'Dette'),
         (PAYMENT_STATUS_CHEQUE, 'Cheque'),
+        (PAYMENT_STATUS_PAYER, 'Payer'),
         (PAYMENT_STATUS_ORDRE_DE_VIREMENT, 'OV')
     ]
 
@@ -182,7 +184,7 @@ class Vente(models.Model):
     def clean(self):
         # Vérifier la logique de date_payement
         if self.statupaiement in [self.PAYMENT_STATUS_CASH, self.PAYMENT_STATUS_CHEQUE]:
-            # Si le statut est Cash ou Chèque, la date de paiement doit être aujourd'hui
+        # Si le statut est Cash ou Chèque, la date de paiement doit être aujourd'hui
             if self.date_payement and self.date_payement.date() != now().date():
                 raise ValidationError("Pour un paiement en Cash ou Chèque, la date de paiement doit être aujourd'hui.")
         elif self.statupaiement in  [self.PAYMENT_STATUS_DETTE, self.PAYMENT_STATUS_ORDRE_DE_VIREMENT]:
@@ -242,7 +244,7 @@ class VenteProduit(models.Model):
                 type_modification='SORTIE',
                 quantite=self.quantite,
                 utilisateur=self.vente.vendeur,
-                raison=f"Vente n°{self.vente.id}"
+                raison=f"Vente n°{self.vente.numero_facture}"
             )
 
     def __str__(self):
@@ -254,18 +256,33 @@ class ModificationStock(models.Model):
     TYPE_CHOICES = [
         ('ENTREE', 'Entrée en stock'),
         ('SORTIE', 'Sortie de stock'),
-        ('AJUSTEMENT', 'Ajustement d\'inventaire'),
+    ]
+
+    MOTIF_CHOICES = [
+        # Motifs d'entrée
+        ('ACHAT', 'Achat fournisseur'),
+        ('RETOUR_CLIENT', 'Entrée - Retour client'),
+        ('AJUSTEMENT_POSITIF', "Entrée - Ajustement d'inventaire"),
+        ('ANNULATION_VENTE', 'Entrée - Annulation de vente'),
+        # Motifs de sortie
+        ('VENTE', 'Vente client'),
+        ('PERTE_PEREMPTION', 'Sortie - Perte (Péremption)'),
+        ('PERTE_CASSE', 'Sortie - Perte (Casse)'),
+        ('PERTE_VOL', 'Sortie - Perte (Vol)'),
+        ('AJUSTEMENT_NEGATIF', "Sortie - Ajustement d'inventaire"),
+        ('ANNULATION_ACHAT', "Sortie - Annulation d'achat"),
     ]
     
     produit = models.ForeignKey('Stockes', on_delete=models.CASCADE, related_name='modifications')
     type_modification = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    motif = models.CharField(max_length=30, choices=MOTIF_CHOICES, default='VENTE')
     quantite = models.PositiveIntegerField()
     date_modification = models.DateTimeField(auto_now_add=True)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='modifications_stock')
-    raison = models.CharField(max_length=255, blank=True, null=True)
+    raison = models.CharField(max_length=255, blank=True, null=True, help_text="Détails supplémentaires (ex: N° de vente/achat)")
   
     def __str__(self):
-        return f"{self.get_type_modification_display()} - {self.produit.produit.name} ({self.quantite}) [Lot: {self.lot}]"
+        return f"{self.get_type_modification_display()} de {self.quantite} ({self.get_motif_display()}) - {self.produit.produit.name}"
     
     class Meta:
         verbose_name = "Modification de stock"
@@ -307,4 +324,3 @@ class AchatLigne(models.Model):
 
     class Meta:
         ordering = ['-date_ajout']
-

@@ -6,7 +6,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-info text-white">
                     <h4 class="mb-0">Ajustement de Stock</h4>
                 </div>
                 <div class="card-body">
@@ -20,54 +20,26 @@
                         {% endfor %}
                     </div>
                     {% endif %}
-
-                    <form method="post">
+                    <p class="text-muted">Utilisez ce formulaire pour corriger les quantités en stock suite à un retour, une perte, ou un comptage d'inventaire.</p>
+                    <form method="post" novalidate>
                         {% csrf_token %}
                         
-                        <div class="mb-3">
-                            {{ form.stock.label_tag }}
-                            {{ form.stock }}
-                            {% if form.stock.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.stock.errors }}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+                                {% endif %}
+                                {% if field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ field.errors|join:", " }}
+                                </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                        </div>
+                        {% endfor %}
 
-                        <div class="mb-3">
-                            {{ form.nouvelle_quantite.label_tag }}
-                            {{ form.nouvelle_quantite }}
-                            {% if form.nouvelle_quantite.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.nouvelle_quantite.errors }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.type_modification.label_tag }}
-                            {{ form.type_modification }}
-                            {% if form.type_modification.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.type_modification.errors }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.raison.label_tag }}
-                            {{ form.raison }}
-                            {% if form.raison.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.raison.errors }}
-                            </div>
-                            {% endif %}
-                            <div class="form-text">
-                                Veuillez fournir une explication détaillée de la raison de cet ajustement.
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between mt-4">
                             <a href="{% url 'liste_stock' %}" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> Retour
                             </a>
@@ -81,20 +53,5 @@
         </div>
     </div>
 </div>
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const stockSelect = document.getElementById('{{ form.stock.id_for_label }}');
-    const qteInput = document.getElementById('{{ form.nouvelle_quantite.id_for_label }}');
-    
-    stockSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const currentQte = selectedOption.getAttribute('data-quantite');
-        qteInput.value = currentQte || '';
-    });
-});
-</script>
-{% endblock %}
 
 {% endblock %}

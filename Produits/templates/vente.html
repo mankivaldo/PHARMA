@@ -101,7 +101,7 @@
                             <option value="{{stock.id}}" 
                                     data-prix="{{stock.prix_achat}}" 
                                     data-quantite="{{stock.quantite}}">
-                                {{stock.produit.name}} - {{stock.prix_achat}} Fbu (Stock: {{stock.quantite}})
+                                {{stock.produit.name}} - {{stock.prix_achat}} Fbu (Stock: {{stock.quantite}}) ({{stock.achat_ligne.date_expiration|date:"d/m/Y"}})
                             </option>
                             {% endfor %}
                         </select>

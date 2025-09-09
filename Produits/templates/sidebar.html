@@ -75,9 +75,15 @@
     </li>
     
     <li>
-      <a href="{% url 'liste_stock' %}" class="{% if request.resolver_match.url_name == 'comptent' %}active{% endif %}">
+      <a href="{% url 'liste_stock' %}" class="{% if request.resolver_match.url_name == 'liste_stock' %}active{% endif %}">
         <i class="fas fa-box"></i>
         <span class="link_name">Stock</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'ajuster_stock' %}" class="{% if request.resolver_match.url_name == 'ajuster_stock' %}active{% endif %}">
+        <i class="fas fa-cogs"></i>
+        <span class="link_name">Ajustement Stock</span>
       </a>
     </li>
     
@@ -103,7 +109,7 @@
     </li>
     
     <li>
-      <a href="#" data-bs-toggle="modal" data-bs-target="#userModal">
+      <a href="#" data-bs-toggle="modal" data-bs-target="#userModal" >
         <i class="fas fa-user-circle"></i>
         <span class="link_name">Mon Profil</span>
       </a>

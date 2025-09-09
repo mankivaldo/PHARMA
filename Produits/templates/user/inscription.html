@@ -1,10 +1,9 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block content %}
 <div class="container mt-4">
     {% if messages %}
-    <div class="alert-container">
+    <div class="messages-container">
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
             {{ message }}
@@ -14,89 +13,52 @@
     </div>
     {% endif %}
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card shadow">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
-                        {% if form.instance.id %}
-                            Modifier l'utilisateur
+                        {% if form.instance.pk %}
+                            Modifier l'utilisateur : {{ form.instance.username }}
                         {% else %}
                             Créer un nouvel utilisateur
                         {% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" autocomplete="off">
+                    <form method="post" autocomplete="off" novalidate>
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="utilisateur" class="form-label">Nom d'utilisateur</label>
-                            <input type="text" class="form-control {% if form.utilisateur.errors %}is-invalid{% endif %}" 
-                                   id="utilisateur" name="utilisateur" 
-                                   value="{% if form.instance.id %}{{ form.instance.utilisateur }}{% endif %}"
-                                   placeholder="Entrez le nom d'utilisateur" 
-                                   autocomplete="off" required>
-                            {% if form.utilisateur.errors %}
-                            <div class="invalid-feedback">
-                                {{ form.utilisateur.errors.0 }}
+                        
+                        {% for field in form %}
+                            <div class="mb-3">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
                             </div>
-                            {% endif %}
-                        </div>
+                        {% endfor %}
 
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
-                                   id="email" name="email" 
-                                   value="{% if form.instance.id %}{{ form.instance.email }}{% endif %}"
-                                   placeholder="Entrez l'adresse email" 
-                                   autocomplete="off" required>
-                            {% if form.email.errors %}
-                            <div class="invalid-feedback">
-                                {{ form.email.errors.0 }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="mot_de_passe" class="form-label">Mot de passe</label>
-                            <input type="password" class="form-control {% if form.mot_de_passe.errors %}is-invalid{% endif %}" 
-                                   id="mot_de_passe" name="mot_de_passe" 
-                                   placeholder="Entrez le mot de passe"
-                                   autocomplete="new-password"
-                                   {% if not form.instance.id %}required{% endif %}>
-                            {% if form.mot_de_passe.errors %}
-                            <div class="invalid-feedback">
-                                {{ form.mot_de_passe.errors.0 }}
-                            </div>
-                            {% endif %}
-                            {% if form.instance.id %}
-                            <small class="text-muted">Laissez vide pour conserver le mot de passe actuel</small>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="confirmation_mot_de_passe" class="form-label">Confirmer le mot de passe</label>
-                            <input type="password" class="form-control {% if form.confirmation_mot_de_passe.errors %}is-invalid{% endif %}" 
-                                   id="confirmation_mot_de_passe" name="confirmation_mot_de_passe" 
-                                   placeholder="Confirmez le mot de passe"
-                                   autocomplete="new-password"
-                                   {% if not form.instance.id %}required{% endif %}>
-                            {% if form.confirmation_mot_de_passe.errors %}
-                            <div class="invalid-feedback">
-                                {{ form.confirmation_mot_de_passe.errors.0 }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="d-flex justify-content-between">
+                        {% if form.instance.pk %}
+                        <small class="form-text text-muted">
+                            Laissez les champs de mot de passe vides pour conserver le mot de passe actuel.
+                        </small>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between mt-4">
                             <a href="{% url 'liste_utilisateurs' %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Retour
+                                <i class="fas fa-arrow-left me-1"></i> Retour
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                {% if form.instance.id %}
-                                    <i class="fas fa-save"></i> Enregistrer les modifications
+                                {% if form.instance.pk %}
+                                    <i class="fas fa-save me-1"></i> Enregistrer les modifications
                                 {% else %}
-                                    <i class="fas fa-plus"></i> Créer l'utilisateur
+                                    <i class="fas fa-plus me-1"></i> Créer l'utilisateur
                                 {% endif %}
                             </button>
                         </div>
@@ -108,29 +70,31 @@
 </div>
 
 <style>
-.alert-container {
+.messages-container {
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 1000;
+    z-index: 1050;
     min-width: 280px;
 }
 .form-control::placeholder {
     color: #6c757d;
     opacity: 0.7;
 }
+.invalid-feedback.d-block {
+    display: block;
+}
 </style>
 
 <script>
-// Auto-close alerts after 3 seconds
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-close alerts after 5 seconds
     setTimeout(function() {
-        var alerts = document.querySelectorAll('.alert');
+        var alerts = document.querySelectorAll('.alert-dismissible');
         alerts.forEach(function(alert) {
-            var bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
+            new bootstrap.Alert(alert).close();
         });
-    }, 3000);
+    }, 5000);
 });
 </script>
 {% endblock %} 

@@ -157,7 +157,8 @@
                 <strong>{{ x.quantite }}</strong>
               </div>
             </td>
-            <td>{{ x.price }} Fbu</td>
+            
+            <td>{{ x.prix_achat }} Fbu</td>
             <td>{{ x.lot }}</td>
             <td>
               <span class="fw-bold">{{ x.date_expiration|date:"d/m/Y" }}</span>
@@ -236,6 +237,7 @@
                             <dd class="col-sm-8">{{ x.lot }}</dd>
                             <dt class="col-sm-4">Conditionnement</dt>
                             <dd class="col-sm-8">{{ x.condisionnement }}</dd>
+                            <dd class="col-sm-8">{{ x.conditionnement }}</dd>
                             
                           </dl>
                         </div>

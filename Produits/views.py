@@ -8,19 +8,19 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.contrib import messages
+from django.contrib import messages, auth
 from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
-from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from .forms import *
 from .models import *
 import openpyxl
 from openpyxl.styles import Font, Alignment
 from django.http import HttpResponse
-from django.forms import inlineformset_factory, modelformset_factory
+from django.forms import inlineformset_factory, modelformset_factory, ValidationError
 from decimal import Decimal
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Count
 from .utils import role_required
 from django.template.loader import render_to_string
 
@@ -39,24 +39,25 @@ def produit_detail(request, slug):
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
-def produit_form(request, name=None):
-    if name:
-        produit = get_object_or_404(Produits, name=name)
-        form = ProduitForm(instance=produit)
-    else:
-        form = ProduitForm()
-    
+def produit_form(request, slug=None):
+    instance = None
+    if slug:
+        instance = get_object_or_404(Produits, slug=slug)
+
     if request.method == 'POST':
-        if name:
-            form = ProduitForm(request.POST, instance=produit)
-        else:
-            form = ProduitForm(request.POST)
-            
+        form = ProduitForm(request.POST, instance=instance)
         if form.is_valid():
-            form.save()
-            return redirect('produit_detail', slug=form.instance.slug)
-    
+            produit = form.save()
+            if instance:
+                messages.success(request, f"Produit '{produit.name}' modifié avec succès.")
+            else:
+                messages.success(request, f"Produit '{produit.name}' créé avec succès.")
+            return redirect('produit_detail', slug=produit.slug)
+    else:
+        form = ProduitForm(instance=instance)
+
     return render(request, 'produit_form.html', {'form': form})
+
 
 
 # Generique fonction
@@ -202,14 +203,40 @@ class ListeVentesView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['clients'] = Customer.objects.all()
-        
-        total_ventes = self.get_queryset().count()
-        montant_total = sum(vente.get_total_amount() for vente in self.get_queryset())
-        
-        context['total_ventes'] = total_ventes
-        context['montant_total'] = montant_total
-        
+
+        # Utiliser une agrégation pour des performances optimales
+        full_queryset = self.get_queryset()
+        aggregation = full_queryset.aggregate(
+            total_ventes=Count('id'),
+            montant_total=Sum(F('lignes__quantite') * F('lignes__prix_vente'))
+        )
+
+        context['total_ventes'] = aggregation.get('total_ventes', 0)
+        context['montant_total'] = aggregation.get('montant_total') or Decimal('0.00')
+
         return context
+
+
+@login_required
+@role_required('ADMIN', 'GESTIONNAIRE')
+def marquer_vente_payee(request, pk):
+    """Marquer une vente comme payée."""
+    vente = get_object_or_404(Vente, pk=pk)
+    
+    if request.method == 'POST':
+        # Vérifier que la vente est en statut "Dette" avant de la marquer comme "Payée"
+        if vente.statupaiement == Vente.PAYMENT_STATUS_DETTE:
+            vente.statupaiement = Vente.PAYMENT_STATUS_PAYER  # Statut "Payé"
+            vente.date_payement = timezone.now() # Mettre à jour la date de paiement
+            vente.save(validate=False) # On bypass la validation car la date de paiement est maintenant dans le passé
+            messages.success(request, f"La vente n°{vente.numero_facture} a été marquée comme payée.")
+        else:
+            messages.warning(request, "Cette vente n'est pas une dette et ne peut être marquée comme payée.")
+    else:
+        messages.error(request, "Action non autorisée.")
+    
+    return redirect('liste_ventes')
+
 
 
 @login_required
@@ -240,21 +267,20 @@ def creer_utilisateur(request):
 @role_required('ADMIN', 'GESTIONNAIRE')
 def modifier_utilisateur(request, pk):
     utilisateur = get_object_or_404(CustomUser, pk=pk)
-    utilisateurs = CustomUser.objects.all().order_by('-id')
     
     if request.method == 'POST':
-        form = InscriptionForm(request.POST, instance=utilisateur)
+        # Utiliser UserEditForm pour la modification
+        form = UserEditForm(request.POST, instance=utilisateur)
         if form.is_valid():
             utilisateur_modifie = form.save()
-            print(f"Utilisateur modifié: {utilisateur_modifie.id} - {utilisateur_modifie.username}")  # Débogage
+            # Le champ mot de passe n'est pas dans ce formulaire, donc on ne le touche pas.
             messages.success(request, 'Utilisateur modifié avec succès')
             return redirect('liste_utilisateurs')  # Rediriger vers liste plutôt que création
     else:
-        form = InscriptionForm(instance=utilisateur)
+        form = UserEditForm(instance=utilisateur)
     
     return render(request, 'user/inscription.html', {
         'form': form,
-        'utilisateurs': utilisateurs,
         'utilisateur_courant': utilisateur
     })
 
@@ -262,10 +288,11 @@ def modifier_utilisateur(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE')
 def supprimer_utilisateur(request, pk):
     utilisateur = get_object_or_404(CustomUser, pk=pk)
-    if request.method == 'POST':
-        utilisateur.delete()
-        messages.success(request, 'Utilisateur supprimé avec succès')
-        return redirect('liste_utilisateurs')
+    if request.user == utilisateur:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+    elif request.method == 'POST':
+            utilisateur.delete()
+            messages.success(request, 'Utilisateur supprimé avec succès')
     return redirect('liste_utilisateurs')
 
 def connexion(request):
@@ -302,45 +329,50 @@ def inscription(request):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def liste_categories(request):
     categories = Categories.objects.all().order_by('-id')
-    return render(request, 'categorie/liste_categories.html', {'categories': categories})
+    return render(request, 'categorie_list.html', {'categories': categories})
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def ajouter_categorie(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-       
-        if name:
-            Categories.objects.create(name=name)
+        form = CategorieForm(request.POST)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Catégorie ajoutée avec succès!')
             return redirect('liste_categories')
         else:
-            messages.error(request, 'Le nom de la catégorie est requis')
-    return render(request, 'categorie/ajouter_categorie.html')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Erreur pour {field}: {error}")
+    return redirect('liste_categories')
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def modifier_categorie(request, pk):
     categorie = get_object_or_404(Categories, id=pk)
     if request.method == 'POST':
-        name = request.POST.get('name')
-        if name:
-            categorie.name = name
-            categorie.save()
+        form = CategorieForm(request.POST, instance=categorie)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Catégorie modifiée avec succès!')
+            return redirect('liste_categories')
         else:
-            messages.error(request, 'Le nom de la catégorie est requis')
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Erreur pour {field}: {error}")
     return redirect('liste_categories')
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def supprimer_categorie(request, pk):
     categorie = get_object_or_404(Categories, id=pk)
-    try:
-        categorie.delete()
-        messages.success(request, 'Catégorie supprimée avec succès!')
-    except:
-        messages.error(request, 'Impossible de supprimer cette catégorie car elle est utilisée par des produits')
+    if request.method == 'POST':
+        try:
+            categorie.delete()
+            messages.success(request, 'Catégorie supprimée avec succès!')
+        except:
+            messages.error(request, 'Impossible de supprimer cette catégorie car elle est utilisée par des produits')
     return redirect('liste_categories')
 
 # Vues pour les conditions
@@ -354,37 +386,40 @@ def liste_conditions(request):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def ajouter_condition(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        if name:
-            Condition.objects.create(name=name)
+        form = ConditionForm(request.POST)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Condition ajoutée avec succès!')
         else:
-            messages.error(request, 'Le nom de la condition est requis')
+            for error in form.errors.values():
+                messages.error(request, error)
     return redirect('liste_conditions')
+
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def modifier_condition(request, pk):
     condition = get_object_or_404(Condition, id=pk)
     if request.method == 'POST':
-        name = request.POST.get('name')
-        if name:
-            condition.name = name
-            condition.save()
+        form = ConditionForm(request.POST, instance=condition)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Condition modifiée avec succès!')
         else:
-            messages.error(request, 'Le nom de la condition est requis')
+            for error in form.errors.values():
+                messages.error(request, error)
     return redirect('liste_conditions')
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def supprimer_condition(request, pk):
     condition = get_object_or_404(Condition, id=pk)
-    try:
-        condition.delete()
-        messages.success(request, 'Condition supprimée avec succès!')
-    except:
-        messages.error(request, 'Impossible de supprimer cette condition car elle est utilisée par des stocks')
+    if request.method == 'POST':
+        try:
+            condition.delete()
+            messages.success(request, 'Condition supprimée avec succès!')
+        except:
+            messages.error(request, 'Impossible de supprimer cette condition car elle est utilisée par des stocks')
     return redirect('liste_conditions')
 
 # Vues pour les clients
@@ -398,21 +433,13 @@ def liste_customers(request):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def ajouter_customer(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        phone = request.POST.get('phone')
-        NIF = request.POST.get('NIF')
-        address = request.POST.get('address')
-        
-        if name and phone:
-            Customer.objects.create(
-                name=name,
-                phone=phone,
-                NIF=NIF,
-                address=address
-            )
+        form = CustomerForm(request.POST)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Client ajouté avec succès!')
         else:
-            messages.error(request, 'Le nom et le téléphone sont requis')
+            for error in form.errors.values():
+                messages.error(request, error)
     return redirect('liste_customers')
 
 @login_required
@@ -420,31 +447,25 @@ def ajouter_customer(request):
 def modifier_customer(request, pk):
     customer = get_object_or_404(Customer, id=pk)
     if request.method == 'POST':
-        name = request.POST.get('name')
-        phone = request.POST.get('phone')
-        NIF = request.POST.get('NIF')
-        address = request.POST.get('address')
-        
-        if name and phone:
-            customer.name = name
-            customer.phone = phone
-            customer.NIF = NIF
-            customer.address = address
-            customer.save()
+        form = CustomerForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
             messages.success(request, 'Client modifié avec succès!')
         else:
-            messages.error(request, 'Le nom et le téléphone sont requis')
+            for error in form.errors.values():
+                messages.error(request, error)
     return redirect('liste_customers')
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def supprimer_customer(request, pk):
     customer = get_object_or_404(Customer, id=pk)
-    try:
-        customer.delete()
-        messages.success(request, 'Client supprimé avec succès!')
-    except:
-        messages.error(request, 'Impossible de supprimer ce client car il est associé à des ventes')
+    if request.method == 'POST':
+        try:
+            customer.delete()
+            messages.success(request, 'Client supprimé avec succès!')
+        except:
+            messages.error(request, 'Impossible de supprimer ce client car il est associé à des ventes')
     return redirect('liste_customers')
 
 @login_required
@@ -523,23 +544,31 @@ def ajuster_stock(request):
         form = AjustementStockForm(request.POST)
         if form.is_valid():
             stock = form.cleaned_data['stock']
-            nouvelle_quantite = form.cleaned_data['nouvelle_quantite']
-            raison = form.cleaned_data['raison']
-            utilisateur = request.user
+            motif = form.cleaned_data['motif']
+            quantite_ajustee = form.cleaned_data['quantite']
+            raison_details = form.cleaned_data['raison']
 
-            ancienne_quantite = stock.quantite
-            if nouvelle_quantite != ancienne_quantite:
-                # Mise à jour du stock
-                stock.quantite = nouvelle_quantite
-                stock.save()
-                # Traçabilité
-                ModificationStock.objects.create(
-                    produit=stock,
-                    type_modification='AJUSTEMENT',
-                    quantite=abs(nouvelle_quantite - ancienne_quantite),
-                    utilisateur=utilisateur,
-                    raison=raison
-                )
+            # Déterminer le type de modification pour un meilleur suivi
+            if motif in ['RETOUR_CLIENT', 'AJUSTEMENT_POSITIF']:
+                type_modif = 'ENTREE'
+                stock.quantite += quantite_ajustee
+                message_action = "ajoutée au"
+            else:
+                type_modif = 'SORTIE'
+                stock.quantite -= quantite_ajustee
+                message_action = "retirée du"
+
+            # Mise à jour du stock et traçabilité
+            stock.save()
+            ModificationStock.objects.create(
+                produit=stock,
+                type_modification=type_modif,
+                motif=motif,
+                quantite=quantite_ajustee,
+                utilisateur=request.user,
+                raison=raison_details
+            )
+            messages.success(request, f"Ajustement réussi. {quantite_ajustee} unité(s) a/ont été {message_action} stock pour '{stock.produit.name}'.")
             return redirect('liste_stock')
     else:
         form = AjustementStockForm()
@@ -581,6 +610,7 @@ def ajouter_achat(request):
                             ModificationStock.objects.create(
                                 produit=stock,
                                 type_modification='ENTREE',
+                                motif='ACHAT',
                                 quantite=ligne.quantite,
                                 utilisateur=request.user,
                                 raison=f"Achat n°{achat.id} - Lot: {ligne.lot}"
@@ -592,12 +622,8 @@ def ajouter_achat(request):
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
         else:
-            for form in formset:
-                for field, errors in form.errors.items():
-                    messages.error(request, f"Erreur : {errors[0]}")
-            if achat_form.errors:
-                for field, errors in achat_form.errors.items():
-                    messages.error(request, f"Erreur : {errors[0]}")
+            # Les erreurs de formulaire seront affichées dans le template
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         achat_form = AchatForm()
         formset = AchatLigneFormSet(queryset=AchatLigne.objects.none())
@@ -617,35 +643,45 @@ class ListeStockView(LoginRequiredMixin, ListView):
     paginate_by = 20  # Optionnel, pour paginer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        # Par défaut, afficher uniquement les produits disponibles (non expirés)
-        statut_exp = self.request.GET.get('statut_exp', None)
-        statut_q = self.request.GET.get('statut_q', None)
-        if statut_exp is None or statut_exp == '':
-            queryset = [s for s in queryset if not s.est_expire]
-        elif statut_exp == 'expire':
-            queryset = [s for s in queryset if s.est_expire]
-        elif statut_exp == 'valide':
-            queryset = [s for s in queryset if not s.est_expire]
-        # Filtrage par statut de quantité (en stock, limité, rupture)
-        if statut_q:
-            queryset = [s for s in queryset if s.statut_quantite == statut_q]
-        # Filtrage par produit si demandé
+        queryset = Stockes.objects.select_related('produit', 'achat_ligne__conditionnement').all()
+        
+        statut_exp = self.request.GET.get('statut_exp', '')
+        statut_q = self.request.GET.get('statut_q')
         produit_id = self.request.GET.get('produit')
+        today = timezone.now().date()
+
+        # Filtrage par statut d'expiration
+        if statut_exp == 'expire':
+            queryset = queryset.filter(achat_ligne__date_expiration__lt=today)
+        elif statut_exp == 'valide':
+            queryset = queryset.filter(Q(achat_ligne__date_expiration__gte=today) | Q(achat_ligne__date_expiration__isnull=True))
+        elif not statut_exp:  # Comportement par défaut : afficher les produits valides
+            queryset = queryset.filter(Q(achat_ligne__date_expiration__gte=today) | Q(achat_ligne__date_expiration__isnull=True))
+
+        # Filtrage par statut de quantité (en stock, limité, rupture)
+        if statut_q == 'green':
+            queryset = queryset.filter(quantite__gt=F('stock_minimum'))
+        elif statut_q == 'orange':
+            queryset = queryset.filter(quantite__lte=F('stock_minimum'), quantite__gt=0)
+        elif statut_q == 'red':
+            queryset = queryset.filter(quantite=0)
+
+        # Filtrage par produit si demandé
         if produit_id:
-            queryset = [s for s in queryset if str(s.produit.id) == str(produit_id)]
+            queryset = queryset.filter(produit_id=produit_id)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        stocks = context['object_list']
-        # Comptage uniquement sur les stocks disponibles (non expirés)
-        stocks_disponibles = [s for s in Stockes.objects.all() if not s.est_expire]
-        context['nb_en_stock_disponible'] = sum(1 for s in stocks_disponibles if s.statut_quantite == 'green')
-        context['nb_limite_disponible'] = sum(1 for s in stocks_disponibles if s.statut_quantite == 'orange')
-        context['nb_rupture'] = sum(1 for s in stocks if s.statut_quantite == 'red')
-        context['nb_expire'] = sum(1 for s in Stockes.objects.all() if s.est_expire)
-        context['total_produits'] = Stockes.objects.count()
+        all_stocks = Stockes.objects.all()
+        today = timezone.now().date()
+        stocks_disponibles = all_stocks.filter(Q(achat_ligne__date_expiration__gte=today) | Q(achat_ligne__date_expiration__isnull=True))
+        
+        context['nb_en_stock_disponible'] = stocks_disponibles.filter(quantite__gt=F('stock_minimum')).count()
+        context['nb_limite_disponible'] = stocks_disponibles.filter(quantite__lte=F('stock_minimum'), quantite__gt=0).count()
+        context['nb_rupture'] = all_stocks.filter(quantite=0).count()
+        context['nb_expire'] = all_stocks.filter(achat_ligne__date_expiration__lt=today).count()
+        context['total_produits'] = all_stocks.count()
         context['filtre_statut_exp'] = self.request.GET.get('statut_exp', '')
         context['filtre_produit'] = self.request.GET.get('produit', '')
         context['produits'] = Produits.objects.all()
@@ -729,9 +765,10 @@ def annuler_vente(request, pk):
                 ModificationStock.objects.create(
                     produit=stock,
                     type_modification='ENTREE',
+                    motif='ANNULATION_VENTE',
                     quantite=ligne.quantite,
                     utilisateur=request.user,
-                    raison=f"Annulation vente n°{vente.id}"
+                    raison=f"Annulation vente n°{vente.numero_facture}"
                 )
             messages.success(request, f"Vente n°{vente.id} annulée et stock réajusté.")
     else:
@@ -755,6 +792,7 @@ def annuler_achat(request, pk):
                     ModificationStock.objects.create(
                         produit=stock,
                         type_modification='SORTIE',
+                        motif='ANNULATION_ACHAT',
                         quantite=ligne.quantite,
                         utilisateur=request.user,
                         raison=f"Annulation achat n°{achat.id}"
@@ -801,62 +839,71 @@ def modifier_fournisseur(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def supprimer_fournisseur(request, pk):
     fournisseur = get_object_or_404(Fournisseur, pk=pk)
-    try:
-        fournisseur.delete()
-        messages.success(request, 'Fournisseur supprimé avec succès!')
-    except Exception as e:
-        messages.error(request, 'Impossible de supprimer ce fournisseur car il est lié à des achats.')
+    if request.method == 'POST':
+        try:
+            fournisseur.delete()
+            messages.success(request, 'Fournisseur supprimé avec succès!')
+        except Exception as e:
+            messages.error(request, 'Impossible de supprimer ce fournisseur car il est lié à des achats.')
     return redirect('liste_fournisseurs')
 
 class DashboardView(LoginRequiredMixin, View):
     template_name = 'dashboard.html'
     
     def get(self, request):
-        # Statistiques des stocks
-        produits_en_stock = Stockes.objects.all()
-        stock_faible = produits_en_stock.filter(quantite__lte=models.F('stock_minimum'), achat_ligne__date_expiration__gte=timezone.now().date()).count()
-        produits_expires = produits_en_stock.filter(
-            achat_ligne__date_expiration__lt=timezone.now().date()
-        ).count()
-        # Proche expiration = expiration dans moins de 30 jours
-        from datetime import timedelta
-        date_limite = timezone.now().date() + timedelta(days=30)
-        produits_proche_expiration = produits_en_stock.filter(
-            achat_ligne__date_expiration__gte=timezone.now().date(),
-            achat_ligne__date_expiration__lte=date_limite
+        today = timezone.now().date()
+        current_month = today.month
+        current_year = today.year
+        
+        # --- Statistiques des stocks (requêtes optimisées) ---
+        all_stocks = Stockes.objects.all()
+        
+        stock_faible = all_stocks.filter(
+            quantite__lte=F('stock_minimum'), quantite__gt=0,
+            achat_ligne__date_expiration__gte=today
         ).count()
         
-        # Statistiques des ventes
-        ventes_mois = Vente.objects.filter(
-            date_vente__month=timezone.now().month,
-            date_vente__year=timezone.now().year
+        produits_expires = all_stocks.filter(achat_ligne__date_expiration__lt=today).count()
+        
+        date_limite_30_jours = today + timezone.timedelta(days=30)
+        produits_proche_expiration = all_stocks.filter(
+            achat_ligne__date_expiration__gte=today,
+            achat_ligne__date_expiration__lte=date_limite_30_jours
+        ).count()
+
+        # --- Statistiques des ventes (agrégation unique) ---
+        ventes_mois_agg = Vente.objects.filter(
+            date_vente__year=current_year,
+            date_vente__month=current_month,
+            annule=False
+        ).aggregate(
+            total_ventes=Sum(F('lignes__quantite') * F('lignes__prix_vente')),
+            nb_ventes=Count('id')
         )
-        total_ventes_mois = sum(vente.get_total_amount() for vente in ventes_mois)
-        nb_ventes_mois = ventes_mois.count()
-        
-        # Top 5 des produits les plus vendus
+        total_ventes_mois = ventes_mois_agg['total_ventes'] or 0
+        nb_ventes_mois = ventes_mois_agg['nb_ventes'] or 0
+
+        # --- Top 5 des produits les plus vendus ---
         top_produits = VenteProduit.objects.values(
             'produit__produit__name'
         ).annotate(
             total_vendu=Sum('quantite')
         ).order_by('-total_vendu')[:5]
         
-        # Statistiques des achats
-        achats_mois = Achat.objects.filter(
-            date_achat__month=timezone.now().month,
-            date_achat__year=timezone.now().year
-        )
-        total_achats_mois = sum(
-            ligne.prix_achat * ligne.quantite 
-            for achat in achats_mois 
-            for ligne in achat.lignes.all()
-        )
+        # --- Statistiques des achats (agrégation unique) ---
+        total_achats_mois = AchatLigne.objects.filter(
+            achat__date_achat__year=current_year,
+            achat__date_achat__month=current_month,
+            achat__annule=False
+        ).aggregate(
+            total=Sum(F('prix_achat') * F('quantite'))
+        )['total'] or 0
         
-        # Calcul de la marge brute du mois
+        # --- Marge brute ---
         marge_brute = total_ventes_mois - total_achats_mois
         
         context = {
-            'total_produits': produits_en_stock.count(),
+            'total_produits': all_stocks.count(),
             'stock_faible': stock_faible,
             'produits_expires': produits_expires,
             'produits_proche_expiration': produits_proche_expiration,
@@ -871,10 +918,8 @@ class DashboardView(LoginRequiredMixin, View):
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
-@login_required
-@role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def facture_vente_view(request, pk):
-    vente = get_object_or_404(Vente, pk=pk)
+    vente = get_object_or_404(Vente.objects.prefetch_related('lignes__produit__produit'), pk=pk)
     entreprise = Entreprise.objects.first()
     phrase = "Merci de votre achat !"
     context = {
@@ -883,5 +928,3 @@ def facture_vente_view(request, pk):
         'phrase': phrase,
     }
     return render(request, 'facture_vente.html', context)
-
-

@@ -65,6 +65,9 @@ urlpatterns = [
     path('achat/<int:pk>/annuler/', login_required(annuler_achat), name='annuler_achat'),
 
     # Facture vente
+
+    path('vente/<int:pk>/marquer_payee/', login_required(marquer_vente_payee), name='marquer_vente_payee'),
+
     path('facture-vente/<int:pk>/', login_required(facture_vente_view), name='facture_vente'),
 
     # Gestion des entreprises

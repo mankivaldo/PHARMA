@@ -19,7 +19,10 @@
             <td>{{ fournisseur.adresse }}</td>
             <td>
                 <a href="{% url 'modifier_fournisseur' fournisseur.id %}" class="btn btn-primary btn-sm">Modifier</a>
-                <a href="{% url 'supprimer_fournisseur' fournisseur.id %}" class="btn btn-danger btn-sm">Supprimer</a>
+                <form action="{% url 'supprimer_fournisseur' fournisseur.id %}" method="post" style="display: inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce fournisseur ?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                </form>
             </td>
         </tr>
         {% empty %}

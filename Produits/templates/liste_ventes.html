@@ -66,6 +66,7 @@
                                 <option value="C" {% if request.GET.statut == "C" %}selected{% endif %}>Cash</option>
                                 <option value="D" {% if request.GET.statut == "D" %}selected{% endif %}>Dette</option>
                                 <option value="CH" {% if request.GET.statut == "CH" %}selected{% endif %}>Chèque</option>
+                                <option value="P" {% if request.GET.statut == "P" %}selected{% endif %}>Payé</option>
                             </select>
                         </div>
             
@@ -113,7 +114,7 @@
                                 <td>{{ vente.numero_facture }}</td>
                                 <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
                                 <td>{{ vente.customer.name }}</td>
-                                <td>{{ vente.Ventes.count }}</td>
+                                <td>{{ vente.lignes.count }}</td>
                                 <td>{{ vente.get_total_amount }} Fbu</td>
                                 <td>
                                     {% if vente.statupaiement == 'C' %}
@@ -122,16 +123,24 @@
                                         <span class="badge bg-warning">Dette</span>
                                     {% elif vente.statupaiement == 'CH' %}
                                         <span class="badge bg-info">Chèque</span>
+                                    {% elif vente.statupaiement == 'P' %}
+                                        <span class="badge bg-primary">Payé</span>
                                     {% endif %}
                                 </td>
+                                
                                 <td>{{ vente.date_payement|date:"d/m/y H:i"}}</td>
                                 <td>
                                     <a href="{% url 'detail-vente' vente.id %}" class="btn btn-info btn-sm">
                                         <i class="bi bi-eye"></i> Détails
                                     </a>
                                     {% if not vente.annule %}
-                                    <a href="{% url 'annuler_vente' vente.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Confirmer l\'annulation de cette vente ?');">
-                                        <i class="bi bi-x-circle"></i> Annuler
+                                       {% if vente.statupaiement == 'D' %}
+                                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#payModal{{ vente.id }}">
+                                            Marquer Payée
+                                        </button>
+                                        {% endif %}
+                                        <a href="{% url 'annuler_vente' vente.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Confirmer l\'annulation de cette vente ?');">
+                                            <i class="bi bi-x-circle"></i> Annuler
                                     </a>
                                     {% else %}
                                     <span class="badge bg-danger">Annulée</span>
@@ -139,6 +148,34 @@
                                 </td>
                                 
                             </tr>
+                            <!-- Modal Confirmation Paiement -->
+                            <div class="modal fade" id="payModal{{ vente.id }}" tabindex="-1" aria-labelledby="payModalLabel{{ vente.id }}" aria-hidden="true">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title" id="payModalLabel{{ vente.id }}">Confirmer le Paiement de la Dette</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                    <p>Veuillez confirmer que la dette pour la vente suivante a été réglée :</p>
+                                    <ul class="list-group">
+                                        <li class="list-group-item"><strong>Facture N° :</strong> {{ vente.numero_facture }}</li>
+                                        <li class="list-group-item"><strong>Client :</strong> {{ vente.customer.name }}</li>
+                                        <li class="list-group-item"><strong>Montant :</strong> {{ vente.get_total_amount }} Fbu</li>
+                                        <li class="list-group-item"><strong>Date de vente :</strong> {{ vente.date_vente|date:"d/m/Y" }}</li>
+                                    </ul>
+                                    <p class="text-danger mt-3">Cette action mettra à jour le statut à "Payé" et enregistrera la date de paiement à aujourd'hui. Elle est irréversible.</p>
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <form action="{% url 'marquer_vente_payee' vente.id %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success">Valider le Paiement</button>
+                                    </form>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                             {% empty %}
                             <tr>
                                 <td colspan="8" class="text-center">Aucune vente enregistrée</td>

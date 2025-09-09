@@ -1,6 +1,29 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from .models import *
+from django.utils import timezone
+
+class CategorieForm(forms.ModelForm):
+    class Meta:
+        model = Categories
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+        }
+        labels = {
+            'name': 'Nom de la catégorie',
+        }
+
+class ConditionForm(forms.ModelForm):
+    class Meta:
+        model = Condition
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+        }
+        labels = {
+            'name': 'Nom de la condition',
+        }
 
 class ProduitForm(forms.ModelForm):
     class Meta:
@@ -52,7 +75,7 @@ class InscriptionForm(UserCreationForm):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'telephone', 'adresse', 'role', 'password1', 'password2')
+        fields = ('username', 'email', 'telephone', 'adresse', 'role')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -63,6 +86,21 @@ class InscriptionForm(UserCreationForm):
                 'placeholder': 'Email'
             })
         }
+
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ('username', 'email', 'telephone', 'adresse', 'role')
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'telephone': forms.TextInput(attrs={'class': 'form-control'}),
+            'adresse': forms.TextInput(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].help_text = None # Masquer l'aide sur le nom d'utilisateur
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
@@ -101,8 +139,12 @@ class VenteForm(forms.ModelForm):
         }
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Ajoute le mot d'invitation
-        self.fields['statupaiement'].widget.choices = [('', 'Choisissez le mode de paiement')] + list(self.fields['statupaiement'].choices)
+        # Exclure le statut 'Payé' des choix du formulaire de création/modification de vente
+        form_choices = [
+            choice for choice in Vente.PAYMENT_STATUS_CHOICES 
+            if choice[0] != Vente.PAYMENT_STATUS_PAYER
+        ]
+        self.fields['statupaiement'].choices = [('', 'Choisissez le mode de paiement')] + form_choices
          # Force la valeur initiale à vide si ce n'est pas un POST (pour l'affichage du formulaire vierge)
         if not self.is_bound:
             self.fields['statupaiement'].initial = ''
@@ -163,7 +205,8 @@ class VenteProduitForm(forms.ModelForm):
                 raise forms.ValidationError("La quantité doit être supérieure à 0")
             if quantite > produit.quantite:
                 raise forms.ValidationError(f"Stock insuffisant. Disponible : {produit.quantite}")
-            if produit.date_expiration and produit.date_expiration < timezone.now().date():
+            # Correction du chemin d'accès à la date d'expiration
+            if produit.achat_ligne and produit.achat_ligne.date_expiration and produit.achat_ligne.date_expiration < timezone.now().date():
                 raise forms.ValidationError("Ce produit est expiré")
             
         if prix_vente:
@@ -174,6 +217,22 @@ class VenteProduitForm(forms.ModelForm):
 
         return cleaned_data
     
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ['name', 'NIF', 'phone', 'address']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'NIF': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'name': 'Nom complet',
+            'NIF': 'NIF',
+            'phone': 'Téléphone',
+            'address': 'Adresse',
+        }
 class FournisseurForm(forms.ModelForm):
     class Meta:
         model = Fournisseur
@@ -260,81 +319,55 @@ class StockForm(forms.ModelForm):
         }
 
 class AjustementStockForm(forms.Form):
+    MOTIF_AJUSTEMENT_CHOICES = [
+        ('', '---------'),
+        ('RETOUR_CLIENT', 'Entrée - Retour client'),
+        ('AJUSTEMENT_POSITIF', "Entrée - Ajustement d'inventaire"),
+        ('PERTE_PEREMPTION', 'Sortie - Perte (Péremption)'),
+        ('PERTE_CASSE', 'Sortie - Perte (Casse)'),
+        ('PERTE_VOL', 'Sortie - Perte (Vol)'),
+        ('AJUSTEMENT_NEGATIF', "Sortie - Ajustement d'inventaire"),
+    ]
+
     stock = forms.ModelChoiceField(
-        queryset=Stockes.objects.all(),
+        queryset=Stockes.objects.filter(quantite__gt=0).select_related('produit').order_by('produit__name'),
         label="Ligne de stock à ajuster",
         widget=forms.Select(attrs={
             'class': 'form-control',
             'data-live-search': 'true'
         })
     )
-    nouvelle_quantite = forms.IntegerField(
-        min_value=0,
-        label="Nouvelle quantité",
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
-    )
-    type_modification = forms.ChoiceField(
-        choices=ModificationStock.TYPE_CHOICES,
-        label="Type de modification",
+    motif = forms.ChoiceField(
+        choices=MOTIF_AJUSTEMENT_CHOICES,
+        label="Motif de l'ajustement",
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    quantite = forms.IntegerField(
+        min_value=1,
+        label="Quantité à ajuster",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 5'})
     )
     raison = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'form-control',
             'rows': 3,
-            'placeholder': 'Expliquez la raison de cet ajustement...'
+            'placeholder': 'Détails supplémentaires sur la raison de cet ajustement...'
         }),
-        required=True,
-        label="Raison de l'ajustement"
+        required=False,
+        label="Détails (optionnel)"
     )
 
     def clean(self):
         cleaned_data = super().clean()
         stock = cleaned_data.get('stock')
-        nouvelle_quantite = cleaned_data.get('nouvelle_quantite')
-        raison = cleaned_data.get('raison')
+        motif = cleaned_data.get('motif')
+        quantite = cleaned_data.get('quantite')
 
-        if not raison or len(raison.strip()) < 10:
-            raise forms.ValidationError("Une raison détaillée (minimum 10 caractères) est requise pour l'ajustement")
-
-        if stock and nouvelle_quantite is not None:
-            if nouvelle_quantite < 0:
-                raise forms.ValidationError("La quantité ne peut pas être négative")
-            if nouvelle_quantite == stock.quantite:
-                raise forms.ValidationError("La nouvelle quantité est identique à l'ancienne")
-
+        if motif and quantite and stock:
+            # Pour les sorties, vérifier que la quantité n'excède pas le stock
+            if motif in ['PERTE_PEREMPTION', 'PERTE_CASSE', 'PERTE_VOL', 'AJUSTEMENT_NEGATIF']:
+                if quantite > stock.quantite:
+                    raise forms.ValidationError(
+                        f"La quantité à retirer ({quantite}) ne peut pas être supérieure au stock actuel ({stock.quantite})."
+                    )
         return cleaned_data
-
-    def save(self, utilisateur):
-        """
-        Applique la modification de stock selon le type choisi et journalise l'opération.
-        """
-        stock = self.cleaned_data['stock']
-        nouvelle_quantite = self.cleaned_data['nouvelle_quantite']
-        type_modification = self.cleaned_data['type_modification']
-        raison = self.cleaned_data['raison']
-
-        if type_modification == 'ENTREE':
-            stock.quantite += nouvelle_quantite
-            quantite_modifiee = nouvelle_quantite
-        elif type_modification == 'SORTIE':
-            stock.quantite -= nouvelle_quantite
-            quantite_modifiee = nouvelle_quantite
-        elif type_modification == 'AJUSTEMENT':
-            quantite_modifiee = nouvelle_quantite
-            stock.quantite = nouvelle_quantite
-        else:
-            raise ValueError("Type de modification inconnu")
-
-        stock.save()
-
-        ModificationStock.objects.create(
-            produit=stock,
-            type_modification=type_modification,
-            quantite=quantite_modifiee,
-            utilisateur=utilisateur,
-            raison=raison,
-            lot=stock.lot
-        )
-        return stock
-
