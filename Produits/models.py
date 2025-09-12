@@ -146,8 +146,8 @@ class Stockes(models.Model):
 class Customer(models.Model):
     name = models.CharField(max_length=100)
     NIF = models.CharField(max_length=100)
-    phone = models.CharField(max_length=132, null=True, blank=True)
-    address = models.CharField(max_length=64, default='')
+    phone = models.CharField(max_length=132, blank=True)
+    address = models.CharField(max_length=64, default='', blank=True)
     created_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     save_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
 
