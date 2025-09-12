@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 text-primary fw-bold">Historique des Ventes par Produit</h5>
+        </div>
+        <div class="card-body">
+            <!-- Formulaire de filtre -->
+            <form method="get" class="row g-3 align-items-end mb-4">
+                <div class="col-md-4">
+                    <label for="date_debut" class="form-label">Date de début</label>
+                    <input type="date" name="date_debut" id="date_debut" class="form-control" value="{{ request.GET.date_debut }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="date_fin" class="form-label">Date de fin</label>
+                    <input type="date" name="date_fin" id="date_fin" class="form-control" value="{{ request.GET.date_fin }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="produit" class="form-label">Produit</label>
+                    <select name="produit" id="produit" class="form-select">
+                        <option value="">Tous les produits</option>
+                        {% for p in produits %}
+                        <option value="{{ p.id }}" {% if request.GET.produit == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i></button>
+                </div>
+            </form>
+
+            <!-- Tableau des résultats -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date Vente</th>
+                            <th>Produit</th>
+                            <th>Qté Avant</th>
+                            <th>Qté Vendue</th>
+                            <th>Qté Après</th>
+                            <th>Prix Unitaire</th>
+                            <th>Prix Total</th>
+                            <th>Vendeur</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in historique %}
+                        <tr>
+                            <td>{{ ligne.vente.date_vente|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'detail-vente' ligne.vente.pk %}">
+                                    {{ ligne.produit.produit.name }}
+                                </a>
+                                <small class="d-block text-muted">Lot: {{ ligne.produit.lot }}</small>
+                            </td>
+                            <td>
+                                {% if ligne.modification.quantite_avant is not None %}
+                                    <span class="badge bg-secondary">{{ ligne.modification.quantite_avant }}</span>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong class="text-danger">-{{ ligne.quantite }}</strong>
+                            </td>
+                            <td>
+                                {% if ligne.modification.quantite_apres is not None %}
+                                    <span class="badge bg-success">{{ ligne.modification.quantite_apres }}</span>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td> 
+                            <td class="text-end">{{ ligne.prix_vente|intcomma }} Fbu</td>
+                            <td class="text-end">{{ ligne.total_price|intcomma }} Fbu</td>
+                            <td>{{ ligne.vente.vendeur.username }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="bi bi-info-circle fs-3"></i>
+                                <p class="mt-2 mb-0">Aucun historique de vente trouvé pour les critères sélectionnés.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Vous pouvez ajouter du JS ici si nécessaire, par exemple pour un datepicker
+</script>
+{% endblock %}

@@ -113,13 +113,13 @@
                     </div>
                     <div class="col-md-2">
                         <label for="prix-1" class="form-label">Prix</label>
-                        <input required placeholder="Prix unitaire" name="prix[]" type="number" 
+                        <input required placeholder="Prix unitaire" name="prix[]" type="number"
                                min="1" class="form-control prix-input" id="prix-1">
                     </div>
                     <div class="col-md-2">
                         <label for="prix_total-1" class="form-label">Total</label>
-                        <input required placeholder="Prix total" name="prix_total[]" type="number" 
-                               min="1" class="form-control prix-total-input" id="prix_total-1" readonly>
+                        <input required placeholder="Prix total" name="prix_total[]" type="text"
+                               class="form-control prix-total-input" id="prix_total-1" readonly>
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="btn btn-danger remove-article d-none">
@@ -137,7 +137,7 @@
                 <div class="col-md-12 text-end mt-3">
                     <div class="form-group">
                         <label for="total-commande" class="form-label">Total Commande</label>
-                        <input type="number" name="total_commande" class="form-control" id="total-commande" readonly>
+                        <input type="text" name="total_commande" class="form-control" id="total-commande" readonly>
                     </div>
                 </div>
             </div>
@@ -174,14 +174,16 @@
         const articlesContainer = document.getElementById('articles-container');
         const addArticleButton = document.getElementById('add-article');
         const totalCommandeInput = document.getElementById('total-commande');
+        const numberFormatter = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
         function updateTotalCommande() {
-            const prixTotalInputs = document.querySelectorAll('.prix-total-input');
             let total = 0;
-            prixTotalInputs.forEach(input => {
-                total += parseFloat(input.value || 0);
+            document.querySelectorAll('.article-row').forEach(row => {
+                const prix = parseFloat(row.querySelector('.prix-input').value) || 0;
+                const quantite = parseInt(row.querySelector('.quantite-input').value) || 0;
+                total += prix * quantite;
             });
-            totalCommandeInput.value = total.toFixed(2);
+            totalCommandeInput.value = numberFormatter.format(total);
         }
 
         function setupArticleRow(row) {
@@ -191,6 +193,20 @@
             const prixTotalInput = row.querySelector('.prix-total-input');
             const removeButton = row.querySelector('.remove-article');
 
+            function updateLine() {
+                const prix = parseFloat(prixInput.value) || 0;
+                let quantite = parseInt(quantiteInput.value) || 0;
+                const maxStock = parseInt(quantiteInput.getAttribute('data-max-stock') || 0);
+                if (quantite > maxStock && maxStock > 0) {
+                    alert(`Stock insuffisant. Maximum disponible : ${maxStock}`);
+                    quantiteInput.value = maxStock;
+                    quantite = maxStock;
+                }
+                const totalLigne = prix * quantite;
+                prixTotalInput.value = numberFormatter.format(totalLigne);
+                updateTotalCommande();
+            }
+
             articleSelect.addEventListener('change', function() {
                 const selectedOption = this.options[this.selectedIndex];
                 const prix = selectedOption.getAttribute('data-prix');
@@ -199,28 +215,8 @@
                 quantiteInput.max = stockMax || '';
                 quantiteInput.setAttribute('data-max-stock', stockMax || '');
                 quantiteInput.value = '1';
-                prixTotalInput.value = prix ? (parseFloat(prix) * 1).toFixed(2) : '';
                 removeButton.classList.remove('d-none');
-                updateTotalCommande();
-            });
-
-            quantiteInput.addEventListener('input', function() {
-                const prix = parseFloat(prixInput.value) || 0;
-                const quantite = parseInt(this.value) || 0;
-                const maxStock = parseInt(this.getAttribute('data-max-stock') || 0);
-                if (quantite > maxStock) {
-                    alert(`Stock insuffisant. Maximum disponible : ${maxStock}`);
-                    this.value = maxStock;
-                }
-                prixTotalInput.value = (prix * (parseInt(this.value) || 0)).toFixed(2);
-                updateTotalCommande();
-            });
-
-            prixInput.addEventListener('input', function() {
-                const prix = parseFloat(this.value) || 0;
-                const quantite = parseInt(quantiteInput.value) || 0;
-                prixTotalInput.value = (prix * quantite).toFixed(2);
-                updateTotalCommande();
+                updateLine();
             });
 
             removeButton.addEventListener('click', function() {
@@ -228,6 +224,9 @@
                 updateRemoveButtons();
                 updateTotalCommande();
             });
+
+            quantiteInput.addEventListener('input', updateLine);
+            prixInput.addEventListener('input', updateLine);
         }
 
         function updateRemoveButtons() {

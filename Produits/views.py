@@ -19,10 +19,12 @@ import openpyxl
 from openpyxl.styles import Font, Alignment
 from django.http import HttpResponse
 from django.forms import inlineformset_factory, modelformset_factory, ValidationError
-from decimal import Decimal
-from django.db.models import Sum, F, Count
+from decimal import Decimal 
+from django.db.models import Sum, F, Count 
+from django.db.models.functions import TruncMonth
 from .utils import role_required
 from django.template.loader import render_to_string
+import json
 
 # Fonctions de base pour la gestion des produits
 @login_required
@@ -181,6 +183,7 @@ class ListeVentesView(LoginRequiredMixin, ListView):
         date_debut = self.request.GET.get('date_debut')
         date_fin = self.request.GET.get('date_fin')
         client_id = self.request.GET.get('client')
+       
         statut = self.request.GET.get('statut')
         date_payement = self.request.GET.get('date_payement')
         
@@ -192,6 +195,7 @@ class ListeVentesView(LoginRequiredMixin, ListView):
         
         if client_id:
             queryset = queryset.filter(customer_id=client_id)
+
         
         if statut:
             queryset = queryset.filter(statupaiement=statut)
@@ -543,33 +547,46 @@ def ajuster_stock(request):
     if request.method == 'POST':
         form = AjustementStockForm(request.POST)
         if form.is_valid():
-            stock = form.cleaned_data['stock']
-            motif = form.cleaned_data['motif']
-            quantite_ajustee = form.cleaned_data['quantite']
-            raison_details = form.cleaned_data['raison']
+            with transaction.atomic():
+                stock_initial = form.cleaned_data['stock']
+                stock = Stockes.objects.select_for_update().get(pk=stock_initial.pk)
 
-            # Déterminer le type de modification pour un meilleur suivi
-            if motif in ['RETOUR_CLIENT', 'AJUSTEMENT_POSITIF']:
-                type_modif = 'ENTREE'
-                stock.quantite += quantite_ajustee
-                message_action = "ajoutée au"
-            else:
-                type_modif = 'SORTIE'
-                stock.quantite -= quantite_ajustee
-                message_action = "retirée du"
+                motif = form.cleaned_data['motif']
+                quantite_ajustee = form.cleaned_data['quantite']
+                raison_details = form.cleaned_data['raison']
 
-            # Mise à jour du stock et traçabilité
-            stock.save()
-            ModificationStock.objects.create(
-                produit=stock,
-                type_modification=type_modif,
-                motif=motif,
-                quantite=quantite_ajustee,
-                utilisateur=request.user,
-                raison=raison_details
-            )
-            messages.success(request, f"Ajustement réussi. {quantite_ajustee} unité(s) a/ont été {message_action} stock pour '{stock.produit.name}'.")
-            return redirect('liste_stock')
+                quantite_avant = stock.quantite
+
+                # Déterminer le type de modification pour un meilleur suivi
+                if motif in ['RETOUR_CLIENT', 'AJUSTEMENT_POSITIF']:
+                    type_modif = 'ENTREE'
+                    stock.quantite += quantite_ajustee
+                    message_action = "ajoutée au"
+                else: # SORTIE
+                    type_modif = 'SORTIE'
+                    if quantite_ajustee > stock.quantite:
+                        messages.error(request, f"La quantité à retirer ({quantite_ajustee}) ne peut pas être supérieure au stock actuel ({stock.quantite}).")
+                        return redirect('ajuster_stock')
+                    stock.quantite -= quantite_ajustee
+                    message_action = "retirée du"
+
+                quantite_apres = stock.quantite
+
+                # Mise à jour du stock et traçabilité
+                stock.save()
+                ModificationStock.objects.create(
+                    produit=stock,
+                    type_modification=type_modif,
+                    motif=motif,
+                    quantite=quantite_ajustee,
+                    utilisateur=request.user,
+                    raison=raison_details,
+                    quantite_avant=quantite_avant,
+                    quantite_apres=quantite_apres
+                )
+                messages.success(request, f"Ajustement réussi. {quantite_ajustee} unité(s) a/ont été {message_action} stock pour '{stock.produit.name}'.")
+                return redirect('liste_stock')
+
     else:
         form = AjustementStockForm()
     return render(request, 'ajuster_stock.html', {'form': form})
@@ -597,6 +614,9 @@ def ajouter_achat(request):
                             ligne.achat = achat
                             ligne.save()
 
+                            quantite_avant = 0
+                            quantite_apres = ligne.quantite
+
                             # Créer une entrée dans le stock
                             stock = Stockes.objects.create(
                                 produit=ligne.produit,
@@ -613,7 +633,9 @@ def ajouter_achat(request):
                                 motif='ACHAT',
                                 quantite=ligne.quantite,
                                 utilisateur=request.user,
-                                raison=f"Achat n°{achat.id} - Lot: {ligne.lot}"
+                                raison=f"Achat n°{achat.id} - Lot: {ligne.lot}",
+                                quantite_avant=quantite_avant,
+                                quantite_apres=quantite_apres
                             )
 
                 messages.success(request, "Achat enregistré et stock mis à jour avec succès !")
@@ -731,6 +753,10 @@ class AchatLigneCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         with transaction.atomic():
             achat_ligne = form.save()
+
+            quantite_avant = 0
+            quantite_apres = achat_ligne.quantite
+
             # Créer automatiquement une entrée dans Stockes
             stock = Stockes.objects.create(
                 produit=achat_ligne.produit,
@@ -745,7 +771,9 @@ class AchatLigneCreateView(LoginRequiredMixin, CreateView):
                 type_modification='ENTREE',
                 quantite=achat_ligne.quantite,
                 utilisateur=self.request.user,
-                raison=f"Nouvel achat - Lot: {achat_ligne.lot}"
+                raison=f"Nouvel achat - Lot: {achat_ligne.lot}",
+                quantite_avant=quantite_avant,
+                quantite_apres=quantite_apres
             )
         return super().form_valid(form)
 
@@ -759,8 +787,12 @@ def annuler_vente(request, pk):
             vente.save(validate=False)  # Désactive la validation métier
             # Réajuster le stock pour chaque ligne de vente
             for ligne in vente.lignes.all():
-                stock = ligne.produit
+                stock = Stockes.objects.select_for_update().get(pk=ligne.produit.pk)
+
+                quantite_avant = stock.quantite
                 stock.quantite += ligne.quantite
+                quantite_apres = stock.quantite
+
                 stock.save()
                 ModificationStock.objects.create(
                     produit=stock,
@@ -768,7 +800,9 @@ def annuler_vente(request, pk):
                     motif='ANNULATION_VENTE',
                     quantite=ligne.quantite,
                     utilisateur=request.user,
-                    raison=f"Annulation vente n°{vente.numero_facture}"
+                    raison=f"Annulation vente n°{vente.numero_facture}",
+                    quantite_avant=quantite_avant,
+                    quantite_apres=quantite_apres
                 )
             messages.success(request, f"Vente n°{vente.id} annulée et stock réajusté.")
     else:
@@ -786,8 +820,13 @@ def annuler_achat(request, pk):
             # Réajuster le stock pour chaque ligne d'achat
             for ligne in achat.lignes.all():
                 stocks = Stockes.objects.filter(achat_ligne=ligne)
-                for stock in stocks:
+                for stock_initial in stocks:
+                    stock = Stockes.objects.select_for_update().get(pk=stock_initial.pk)
+
+                    quantite_avant = stock.quantite
                     stock.quantite -= ligne.quantite
+                    quantite_apres = stock.quantite
+
                     stock.save()
                     ModificationStock.objects.create(
                         produit=stock,
@@ -795,7 +834,9 @@ def annuler_achat(request, pk):
                         motif='ANNULATION_ACHAT',
                         quantite=ligne.quantite,
                         utilisateur=request.user,
-                        raison=f"Annulation achat n°{achat.id}"
+                        raison=f"Annulation achat n°{achat.id}",
+                        quantite_avant=quantite_avant,
+                        quantite_apres=quantite_apres
                     )
             messages.success(request, f"Achat n°{achat.id} annulé et stock réajusté.")
     else:
@@ -901,6 +942,21 @@ class DashboardView(LoginRequiredMixin, View):
         
         # --- Marge brute ---
         marge_brute = total_ventes_mois - total_achats_mois
+
+        # --- Données pour le graphique des ventes ---
+        twelve_months_ago = today - timezone.timedelta(days=365)
+        sales_data = Vente.objects.filter(
+            date_vente__gte=twelve_months_ago,
+            annule=False
+        ).annotate(
+            month=TruncMonth('date_vente')
+        ).values('month').annotate(
+            total_sales=Sum(F('lignes__quantite') * F('lignes__prix_vente'))
+        ).order_by('month')
+
+        # Préparer les données pour Chart.js
+        sales_labels = [s['month'].strftime('%b %Y') for s in sales_data]
+        sales_values = [float(s['total_sales'] or 0) for s in sales_data]
         
         context = {
             'total_produits': all_stocks.count(),
@@ -912,6 +968,8 @@ class DashboardView(LoginRequiredMixin, View):
             'top_produits': top_produits,
             'total_achats_mois': total_achats_mois,
             'marge_brute': marge_brute,
+            'sales_labels': json.dumps(sales_labels),
+            'sales_values': json.dumps(sales_values),
         }
         
         return render(request, self.template_name, context)
@@ -928,3 +986,30 @@ def facture_vente_view(request, pk):
         'phrase': phrase,
     }
     return render(request, 'facture_vente.html', context)
+
+@login_required
+@role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
+def historique_ventes(request):
+    """
+    Affiche un historique des produits vendus avec filtres.
+    """
+    historique = VenteProduit.objects.filter(vente__annule=False).select_related(
+        'produit__produit', 
+        'vente',
+        'modification' # Suit la relation OneToOne inverse
+    ).order_by('-vente__date_vente')
+
+    # Filtres
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    produit_id = request.GET.get('produit')
+
+    if date_debut:
+        historique = historique.filter(vente__date_vente__gte=date_debut)
+    if date_fin:
+        historique = historique.filter(vente__date_vente__lte=date_fin + ' 23:59:59')
+    if produit_id:
+        historique = historique.filter(produit__produit_id=produit_id)
+
+    context = {'historique': historique, 'produits': Produits.objects.all()}
+    return render(request, 'historique_ventes.html', context)

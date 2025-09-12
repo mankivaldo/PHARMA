@@ -49,6 +49,12 @@
       </a>
     </li>
     <li>
+      <a href="{% url 'historique_ventes' %}" class="{% if request.resolver_match.url_name == 'historique_ventes' %}active{% endif %}">
+        <i class="fas fa-history"></i>
+        <span class="link_name">Historique Ventes</span>
+      </a>
+    </li>
+    <li>
       <a href="{% url 'produit_list' %}" class="{% if request.resolver_match.url_name == 'produit_list' %}active{% endif %}">
         <i class="fas fa-clipboard-list"></i>
         <span class="link_name">Liste des produits</span>

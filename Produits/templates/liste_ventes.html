@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
     <div class="container">
@@ -13,7 +14,7 @@
             </div>
             <div class="col-md-4">
                 <div class="stats-card bg-success text-white p-3">
-                    <h3 class="text-center">{{ montant_total }} Fbu</h3>
+                    <h3 class="text-center">{{ montant_total|intcomma }} Fbu</h3>
                     <p class="text-center mb-0">Chiffre d'affaires</p>
                 </div>
             </div>
@@ -45,14 +46,14 @@
                             <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ request.GET.date_fin }}">
                         </div>
             
-                        <!-- Client -->
+                        <!-- Produit -->
                         <div class="col-md-3">
-                            <label for="client" class="form-label">Client</label>
-                            <select class="form-control" id="client" name="client">
-                                <option value="">Tous les clients</option>
-                                {% for client in clients %}
-                                <option value="{{ client.id }}" {% if request.GET.client == client.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ client.name }}
+                            <label for="produit" class="form-label">Produits</label>
+                            <select class="form-control" id="produit" name="produit">
+                                <option value="">Tous les Produits</option>
+                                {% for produit in Produits %}
+                                <option value="{{ produit.id }}" {% if request.GET.Produit == produit.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ produit.name }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -115,7 +116,7 @@
                                 <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
                                 <td>{{ vente.customer.name }}</td>
                                 <td>{{ vente.lignes.count }}</td>
-                                <td>{{ vente.get_total_amount }} Fbu</td>
+                                <td class="text-end">{{ vente.get_total_amount|intcomma }} Fbu</td>
                                 <td>
                                     {% if vente.statupaiement == 'C' %}
                                         <span class="badge bg-success">Cash</span>
@@ -161,7 +162,7 @@
                                     <ul class="list-group">
                                         <li class="list-group-item"><strong>Facture N° :</strong> {{ vente.numero_facture }}</li>
                                         <li class="list-group-item"><strong>Client :</strong> {{ vente.customer.name }}</li>
-                                        <li class="list-group-item"><strong>Montant :</strong> {{ vente.get_total_amount }} Fbu</li>
+                                        <li class="list-group-item"><strong>Montant :</strong> {{ vente.get_total_amount|intcomma }} Fbu</li>
                                         <li class="list-group-item"><strong>Date de vente :</strong> {{ vente.date_vente|date:"d/m/Y" }}</li>
                                     </ul>
                                     <p class="text-danger mt-3">Cette action mettra à jour le statut à "Payé" et enregistrera la date de paiement à aujourd'hui. Elle est irréversible.</p>

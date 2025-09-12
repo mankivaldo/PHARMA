@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block content %}
 <div class="content-wrapper">
     <div class="content-header">
@@ -65,7 +66,7 @@
                             <h5 class="card-title mb-0">Ventes du mois</h5>
                         </div>
                         <div class="card-body">
-                            <h3>{{ total_ventes_mois|floatformat:2 }} Fbu</h3>
+                            <h3>{{ total_ventes_mois|intcomma }} Fbu</h3>
                         </div>
                     </div>
                 </div>
@@ -75,7 +76,7 @@
                             <h5 class="card-title mb-0">Achats du mois</h5>
                         </div>
                         <div class="card-body">
-                            <h3>{{ total_achats_mois|floatformat:2 }} Fbu</h3>
+                            <h3>{{ total_achats_mois|intcomma }} Fbu</h3>
                         </div>
                     </div>
                 </div>
@@ -85,14 +86,27 @@
                             <h5 class="card-title mb-0">Marge brute du mois</h5>
                         </div>
                         <div class="card-body">
-                            <h3>{{ marge_brute|floatformat:2 }} Fbu</h3>
+                            <h3>{{ marge_brute|intcomma }} Fbu</h3>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Troisième ligne: Top produits -->
-            <div class="row">
+            <!-- Quatrième ligne: Graphique des ventes -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i>Ventes sur les 12 derniers mois</h5>
+                        </div>
+                        <div class="card-body" style="height: 350px;">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cinquième ligne: Top produits -->            <div class="row">
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
@@ -128,4 +142,56 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('salesChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: {{ sales_labels|safe }},
+                datasets: [{
+                    label: 'Chiffre d\'affaires (Fbu)',
+                    data: {{ sales_values|safe }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return new Intl.NumberFormat('fr-FR').format(value) + ' Fbu';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) { label += new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'BIF', minimumFractionDigits: 0 }).format(context.parsed.y); }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

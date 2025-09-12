@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr" class="light">
   <head>
@@ -139,16 +140,16 @@ table {
                                     <td>{{ ligne.produit.lot }}</td>
                                     <td>{{ ligne.produit.conditionnement }}</td>
                                     <td>{{ ligne.produit.date_expiration|date:'d/m/Y' }}</td>
-                                    <td>{{ ligne.quantite }}</td>
-                                    <td>{{ ligne.prix_vente }} Fbu</td>
-                                    <td>{{ ligne.total_price }} Fbu</td>
+                                    <td class="text-end">{{ ligne.quantite }}</td>
+                                    <td class="text-end">{{ ligne.prix_vente|intcomma }} Fbu</td>
+                                    <td class="text-end">{{ ligne.total_price|intcomma }} Fbu</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <th colspan="6" class="text-end">Total</th>
-                                    <th>{{ vente.get_total_amount }} Fbu</th>
+                                    <th class="text-end">{{ vente.get_total_amount|intcomma }} Fbu</th>
                                 </tr>
                             </tfoot>
                         </table>

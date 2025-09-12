@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.timezone import now
-from django.utils import timezone 
+from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import re
@@ -230,21 +230,41 @@ class VenteProduit(models.Model):
         if self.quantite > self.produit.quantite:
             raise ValidationError(f"Stock insuffisant. Disponible : {self.produit.quantite}")
     
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs): # Note: This save method is called from AddinvoiceView
         self.clean()
         is_new = self._state.adding
-        super().save(*args, **kwargs)
-        # Mise à jour de la quantité en stock
-        self.produit.quantite -= self.quantite
-        self.produit.save()
-        # Traçabilité du mouvement (uniquement à la création)
-        if is_new:
+
+        if not is_new:
+            # Updating a sale line is complex. For now, we assume it's not happening.
+            # If it were, we'd need to revert the old stock change and apply the new one.
+            super().save(*args, **kwargs)
+            return
+
+        with transaction.atomic():
+            # Lock the stock item to prevent race conditions.
+            stock_item = Stockes.objects.select_for_update().get(pk=self.produit.pk)
+
+            quantite_avant = stock_item.quantite
+            quantite_apres = stock_item.quantite - self.quantite
+
+            # Save the sale line itself
+            super().save(*args, **kwargs)
+
+            # Update stock quantity
+            stock_item.quantite = quantite_apres
+            stock_item.save()
+
+            # Create the tracking record and link it to this sale line
             ModificationStock.objects.create(
-                produit=self.produit,
+                produit=stock_item,
                 type_modification='SORTIE',
+                motif='VENTE',
                 quantite=self.quantite,
                 utilisateur=self.vente.vendeur,
-                raison=f"Vente n°{self.vente.numero_facture}"
+                raison=f"Vente n°{self.vente.numero_facture}",
+                quantite_avant=quantite_avant,
+                quantite_apres=quantite_apres,
+                vente_ligne=self
             )
 
     def __str__(self):
@@ -277,9 +297,12 @@ class ModificationStock(models.Model):
     type_modification = models.CharField(max_length=10, choices=TYPE_CHOICES)
     motif = models.CharField(max_length=30, choices=MOTIF_CHOICES, default='VENTE')
     quantite = models.PositiveIntegerField()
+    quantite_avant = models.PositiveIntegerField(null=True, blank=True, help_text="Quantité en stock avant la modification")
+    quantite_apres = models.PositiveIntegerField(null=True, blank=True, help_text="Quantité en stock après la modification")
     date_modification = models.DateTimeField(auto_now_add=True)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='modifications_stock')
     raison = models.CharField(max_length=255, blank=True, null=True, help_text="Détails supplémentaires (ex: N° de vente/achat)")
+    vente_ligne = models.OneToOneField(VenteProduit, on_delete=models.SET_NULL, null=True, blank=True, related_name='modification')
   
     def __str__(self):
         return f"{self.get_type_modification_display()} de {self.quantite} ({self.get_motif_display()}) - {self.produit.produit.name}"
@@ -309,6 +332,9 @@ class Achat(models.Model):
     def __str__(self):
         return f"Achat {self.id} - {self.fournisseur.nom} ({self.date_achat.date()})"
 
+    def get_total(self):
+        return sum(ligne.get_total for ligne in self.lignes.all())
+
 class AchatLigne(models.Model):
     achat = models.ForeignKey(Achat, related_name='lignes', on_delete=models.CASCADE)
     produit = models.ForeignKey(Produits, on_delete=models.PROTECT)
@@ -321,6 +347,10 @@ class AchatLigne(models.Model):
 
     def __str__(self):
         return f"{self.produit.name} x{self.quantite} (Lot: {self.lot})"
+
+    @property
+    def get_total(self):
+        return self.quantite * self.prix_achat
 
     class Meta:
         ordering = ['-date_ajout']

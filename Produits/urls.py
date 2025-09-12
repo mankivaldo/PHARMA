@@ -75,4 +75,9 @@ urlpatterns = [
     path('entreprise/ajouter/', login_required(ajouter_entreprise), name='ajouter_entreprise'),
     path('entreprise/<int:pk>/modifier/', login_required(modifier_entreprise), name='modifier_entreprise'),
     path('entreprise/<int:pk>/supprimer/', login_required(supprimer_entreprise), name='supprimer_entreprise'),
+    
+    
+    # Historique des ventes
+    path('historique-ventes/', login_required(historique_ventes), name='historique_ventes'),
+    
 ]

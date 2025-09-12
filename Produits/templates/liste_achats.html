@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block content %}
 <div class="content-wrapper">
     <div class="content-header">
@@ -39,7 +40,7 @@
                                     <td>{{ achat.fournisseur.nom }}</td>
                                     <td>{{ achat.facture }}</td>
                                     <td>{{ achat.utilisateur }}</td>
-                                    <td>{{ achat.get_total|floatformat:2 }} Fbu</td>
+                                    <td class="text-end">{{ achat.get_total|intcomma }} Fbu</td>
                                     <td>
                                         <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailAchatModal{{ achat.id }}" title="Voir les détails">
                                             <i class="fas fa-eye"></i>
@@ -106,9 +107,9 @@
                                                         <tbody>
                                                             {% for ligne in achat.lignes.all %}
                                                             <tr>
-                                                                <td>{{ ligne.produit.name }}</td>
-                                                                <td>{{ ligne.quantite }}</td>                                                                <td>{{ ligne.prix_achat|floatformat:2 }} Fbu</td>
-                                                                <td>{{ ligne.get_total|floatformat:2 }} Fbu</td>
+                                                                <td>{{ ligne.produit.name }}</td> 
+                                                                <td>{{ ligne.quantite }}</td>                                                                <td class="text-end">{{ ligne.prix_achat|intcomma }} Fbu</td>
+                                                                <td class="text-end">{{ ligne.get_total|intcomma }} Fbu</td>
                                                                 <td>{{ ligne.lot|default:"-" }}</td>
                                                                 <td>{{ ligne.date_expiration|date:"d/m/Y"|default:"-" }}</td>
                                                                 <td>{{ ligne.conditionnement.name }}</td>
@@ -122,7 +123,7 @@
                                                         <tfoot>
                                                             <tr>
                                                                 <th colspan="3" class="text-end">Total :</th>
-                                                                <th>{{ achat.get_total|floatformat:2 }} Fbu</th>
+                                                                <th class="text-end">{{ achat.get_total|intcomma }} Fbu</th>
                                                                 <th colspan="3"></th>
                                                             </tr>
                                                         </tfoot>
