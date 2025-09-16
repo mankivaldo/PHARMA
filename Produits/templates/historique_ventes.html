@@ -45,6 +45,7 @@
                             <th>Prix Unitaire</th>
                             <th>Prix Total</th>
                             <th>Vendeur</th>
+                               <th>Client</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,6 +78,7 @@
                             <td class="text-end">{{ ligne.prix_vente|intcomma }} Fbu</td>
                             <td class="text-end">{{ ligne.total_price|intcomma }} Fbu</td>
                             <td>{{ ligne.vente.vendeur.username }}</td>
+                               <td>{{ ligne.vente.customer.name }}</td>
                         </tr>
                         {% empty %}
                         <tr>
