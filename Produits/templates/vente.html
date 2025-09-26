@@ -130,7 +130,7 @@
             </div>
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <button type="button" id="add-article" class="btn btn-success">
+                    <button type="button" id="add-article" class="btn
                         <i class="bi bi-plus"></i> Ajouter un article
                     </button>
                 </div>
@@ -179,8 +179,9 @@
         function updateTotalCommande() {
             let total = 0;
             document.querySelectorAll('.article-row').forEach(row => {
-                const prix = parseFloat(row.querySelector('.prix-input').value) || 0;
-                const quantite = parseInt(row.querySelector('.quantite-input').value) || 0;
+                // Nettoie les valeurs avant conversion
+                const prix = parseFloat((row.querySelector('.prix-input').value || '').replace(/\s/g, '')) || 0;
+                const quantite = parseInt((row.querySelector('.quantite-input').value || '').replace(/\s/g, '')) || 0;
                 total += prix * quantite;
             });
             totalCommandeInput.value = numberFormatter.format(total);
@@ -194,9 +195,10 @@
             const removeButton = row.querySelector('.remove-article');
 
             function updateLine() {
-                const prix = parseFloat(prixInput.value) || 0;
-                let quantite = parseInt(quantiteInput.value) || 0;
-                const maxStock = parseInt(quantiteInput.getAttribute('data-max-stock') || 0);
+                // Nettoie les valeurs avant conversion
+                const prix = parseFloat((prixInput.value || '').replace(/\s/g, '')) || 0;
+                let quantite = parseInt((quantiteInput.value || '').replace(/\s/g, '')) || 0;
+                const maxStock = parseInt((quantiteInput.getAttribute('data-max-stock') || '').replace(/\s/g, '')) || 0;
                 if (quantite > maxStock && maxStock > 0) {
                     alert(`Stock insuffisant. Maximum disponible : ${maxStock}`);
                     quantiteInput.value = maxStock;
