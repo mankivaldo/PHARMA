@@ -61,6 +61,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Pagination pour condition_list.html -->
+    {% if is_paginated %}
+    <nav aria-label="Pagination des conditions" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if conditions.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ conditions.previous_page_number }}">&laquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+        {% endif %}
+        {% for num in conditions.paginator.page_range %}
+          {% if conditions.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > conditions.number|add:'-3' and num < conditions.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if conditions.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ conditions.next_page_number }}">&raquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <!-- Modal Ajout -->
@@ -168,4 +197,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 3000);
 });
 </script>
-{% endblock %} 
+{% endblock %}

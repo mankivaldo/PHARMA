@@ -230,6 +230,7 @@ class VenteProduit(models.Model):
     def clean(self):
         if self.quantite > self.produit.quantite:
             raise ValidationError(f"Stock insuffisant. Disponible : {self.produit.quantite}")
+        
     
     def save(self, *args, **kwargs): # Note: This save method is called from AddinvoiceView
         self.clean()

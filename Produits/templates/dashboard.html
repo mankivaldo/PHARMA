@@ -60,7 +60,7 @@
 
             <!-- Deuxième ligne: Statistiques financières -->
             <div class="row mb-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card">
                         <div class="card-header bg-info text-white">
                             <h5 class="card-title mb-0">Ventes du mois</h5>
@@ -70,17 +70,27 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <h5 class="card-title mb-0">Achats du mois</h5>
+                            <h5 class="card-title mb-0">Achats du mois (total)</h5>
                         </div>
                         <div class="card-body">
                             <h3>{{ total_achats_mois|intcomma }} Fbu</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">Coût d'achat des produits vendus</h5>
+                        </div>
+                        <div class="card-body">
+                            <h3>{{ cout_achat_vendu|intcomma }} Fbu</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="card">
                         <div class="card-header {% if marge_brute >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
                             <h5 class="card-title mb-0">Marge brute du mois</h5>
@@ -155,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 labels: {{ sales_labels|safe }},
                 datasets: [{
-                    label: 'Chiffre d\'affaires (Fbu)',
+                    label: "Chiffre d'affaires (Fbu)",
                     data: {{ sales_values|safe }},
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
                     borderColor: 'rgba(54, 162, 235, 1)',

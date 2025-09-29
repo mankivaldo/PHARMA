@@ -25,13 +25,20 @@ from django.db.models.functions import TruncMonth
 from .utils import role_required
 from django.template.loader import render_to_string
 import json
+from django.core.paginator import Paginator
 
 # Fonctions de base pour la gestion des produits
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def produit_list(request):
     produits = Produits.objects.all()
-    return render(request, 'produit_list.html', {'produits': produits})
+    paginator = Paginator(produits, 10)  # 10 produits par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'produit_list.html', {
+        'produits': page_obj,
+        'is_paginated': page_obj.has_other_pages()
+    })
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
@@ -333,7 +340,13 @@ def inscription(request):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def liste_categories(request):
     categories = Categories.objects.all().order_by('-id')
-    return render(request, 'categorie_list.html', {'categories': categories})
+    paginator = Paginator(categories, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'categorie_list.html', {
+        'categories': page_obj,
+        'is_paginated': page_obj.has_other_pages()
+    })
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
@@ -384,7 +397,13 @@ def supprimer_categorie(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def liste_conditions(request):
     conditions = Condition.objects.all().order_by('-id')
-    return render(request, 'condition_list.html', {'conditions': conditions})
+    paginator = Paginator(conditions, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'condition_list.html', {
+        'conditions': page_obj,
+        'is_paginated': page_obj.has_other_pages()
+    })
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
@@ -431,7 +450,13 @@ def supprimer_condition(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def liste_customers(request):
     customers = Customer.objects.all().order_by('-id')
-    return render(request, 'customer_list.html', {'customers': customers})
+    paginator = Paginator(customers, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'customer_list.html', {
+        'customers': page_obj,
+        'is_paginated': page_obj.has_other_pages()
+    })
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
@@ -662,7 +687,7 @@ class ListeStockView(LoginRequiredMixin, ListView):
     context_object_name = 'stocks'
     login_url = 'connexion'
     ordering = ['-achat_ligne__date_ajout']  # Correction: utiliser le champ via la relation
-    paginate_by = 20  # Optionnel, pour paginer
+    paginate_by = 10  # Optionnel, pour paginer
 
     def get_queryset(self):
         queryset = Stockes.objects.select_related('produit', 'achat_ligne__conditionnement').all()
@@ -847,7 +872,13 @@ def annuler_achat(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def liste_fournisseurs(request):
     fournisseurs = Fournisseur.objects.all().order_by('-id')
-    return render(request, 'liste_fournisseurs.html', {'fournisseurs': fournisseurs})
+    paginator = Paginator(fournisseurs, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'liste_fournisseurs.html', {
+        'fournisseurs': page_obj,
+        'is_paginated': page_obj.has_other_pages()
+    })
 
 @login_required
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
@@ -890,8 +921,20 @@ def supprimer_fournisseur(request, pk):
 
 class DashboardView(LoginRequiredMixin, View):
     template_name = 'dashboard.html'
-    
+
     def get(self, request):
+        today = timezone.now().date()
+        current_month = today.month
+        current_year = today.year
+
+        # --- Prix d'achat total du mois (tous les achats, pas seulement vendus) ---
+        total_achats_mois = AchatLigne.objects.filter(
+            achat__date_achat__year=current_year,
+            achat__date_achat__month=current_month,
+            achat__annule=False
+        ).aggregate(
+            total=Sum(F('prix_achat') * F('quantite'))
+        )['total'] or 0
         today = timezone.now().date()
         current_month = today.month
         current_year = today.year
@@ -931,17 +974,17 @@ class DashboardView(LoginRequiredMixin, View):
             total_vendu=Sum('quantite')
         ).order_by('-total_vendu')[:5]
         
-        # --- Statistiques des achats (agrégation unique) ---
-        total_achats_mois = AchatLigne.objects.filter(
-            achat__date_achat__year=current_year,
-            achat__date_achat__month=current_month,
-            achat__annule=False
+        # --- Coût d'achat des produits vendus ce mois ---
+        cout_achat_vendu = VenteProduit.objects.filter(
+            vente__date_vente__year=current_year,
+            vente__date_vente__month=current_month,
+            vente__annule=False
         ).aggregate(
-            total=Sum(F('prix_achat') * F('quantite'))
+            total=Sum(F('quantite') * F('produit__prix_achat'))
         )['total'] or 0
-        
-        # --- Marge brute ---
-        marge_brute = total_ventes_mois - total_achats_mois
+
+        # --- Marge brute réelle ---
+        marge_brute = total_ventes_mois - cout_achat_vendu
 
         # --- Données pour le graphique des ventes ---
         twelve_months_ago = today - timezone.timedelta(days=365)
@@ -966,6 +1009,7 @@ class DashboardView(LoginRequiredMixin, View):
             'ventes_mois': nb_ventes_mois,
             'total_ventes_mois': total_ventes_mois,
             'top_produits': top_produits,
+            'cout_achat_vendu': cout_achat_vendu,
             'total_achats_mois': total_achats_mois,
             'marge_brute': marge_brute,
             'sales_labels': json.dumps(sales_labels),
@@ -991,12 +1035,12 @@ def facture_vente_view(request, pk):
 @role_required('ADMIN', 'GESTIONNAIRE', 'VENDEUR')
 def historique_ventes(request):
     """
-    Affiche un historique des produits vendus avec filtres.
+    Affiche un historique des produits vendus avec filtres et pagination.
     """
     historique = VenteProduit.objects.filter(vente__annule=False).select_related(
         'produit__produit', 
         'vente',
-        'modification' # Suit la relation OneToOne inverse
+        'modification'
     ).order_by('-vente__date_vente')
 
     # Filtres
@@ -1011,5 +1055,14 @@ def historique_ventes(request):
     if produit_id:
         historique = historique.filter(produit__produit_id=produit_id)
 
-    context = {'historique': historique, 'produits': Produits.objects.all()}
+    # Ajout de la pagination
+    paginator = Paginator(historique, 10)  # 10 articles par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'historique': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'produits': Produits.objects.all()
+    }
     return render(request, 'historique_ventes.html', context)

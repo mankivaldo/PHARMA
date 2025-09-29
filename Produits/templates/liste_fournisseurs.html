@@ -32,4 +32,32 @@
         {% endfor %}
     </tbody>
 </table>
+<!-- Pagination pour liste_fournisseurs.html -->
+{% if is_paginated %}
+<nav aria-label="Pagination des fournisseurs" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if fournisseurs.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ fournisseurs.previous_page_number }}">&laquo;</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    {% endif %}
+    {% for num in fournisseurs.paginator.page_range %}
+      {% if fournisseurs.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > fournisseurs.number|add:'-3' and num < fournisseurs.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+    {% if fournisseurs.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ fournisseurs.next_page_number }}">&raquo;</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}

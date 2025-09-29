@@ -73,6 +73,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Pagination pour customer_list.html -->
+    {% if is_paginated %}
+    <nav aria-label="Pagination des clients" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if customers.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ customers.previous_page_number }}">&laquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+        {% endif %}
+        {% for num in customers.paginator.page_range %}
+          {% if customers.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > customers.number|add:'-3' and num < customers.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if customers.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ customers.next_page_number }}">&raquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <!-- Modal Ajout -->
@@ -227,4 +256,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 3000);
 });
 </script>
-{% endblock %} 
+{% endblock %}

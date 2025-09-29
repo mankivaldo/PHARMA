@@ -200,6 +200,35 @@
                 </div>
             </div>
         </div>
+
+        <!-- Pagination pour produit_list.html -->
+        {% if is_paginated %}
+        <nav aria-label="Pagination des produits" class="mt-4">
+          <ul class="pagination justify-content-center">
+            {% if produits.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ produits.previous_page_number }}">&laquo;</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            {% endif %}
+            {% for num in produits.paginator.page_range %}
+              {% if produits.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+              {% elif num > produits.number|add:'-3' and num < produits.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+              {% endif %}
+            {% endfor %}
+            {% if produits.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ produits.next_page_number }}">&raquo;</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
     </div>
 
     <!-- Modal de confirmation de suppression -->

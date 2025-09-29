@@ -59,6 +59,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Pagination pour categorie_list.html -->
+    {% if is_paginated %}
+    <nav aria-label="Pagination des catégories" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if categories.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ categories.previous_page_number }}">&laquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+        {% endif %}
+        {% for num in categories.paginator.page_range %}
+          {% if categories.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > categories.number|add:'-3' and num < categories.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if categories.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ categories.next_page_number }}">&raquo;</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <!-- Modal Ajout -->
@@ -166,4 +195,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 3000);
 });
 </script>
-{% endblock %} 
+{% endblock %}
