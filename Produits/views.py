@@ -747,12 +747,16 @@ class DetailStockView(LoginRequiredMixin, DetailView):
         return context
 
 class ListeAchatsView(LoginRequiredMixin, ListView):
+    
     model = Achat
     template_name = 'liste_achats.html'
     context_object_name = 'achats'
     login_url = 'connexion'
     ordering = ['-date_achat']
     paginate_by = 10
+    
+    def get_queryset(self):
+        return Achat.objects.all().order_by('-date_achat')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
